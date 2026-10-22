@@ -1,0 +1,35 @@
+{% extends "construction/base.html" %}
+{% block title %}Налаштування — БудПроєкт{% endblock %}
+{% block heading %}Налаштування{% endblock %}
+{% block description %}Ваш профіль, пароль і стан бази даних.{% endblock %}
+{% block content %}
+<div class="grid g2">
+  <form method="post" class="card" novalidate>{% csrf_token %}
+    <div class="card-head">Профіль: {{ user.username }}</div>
+    <div class="card-body">
+      {{ profile_form.non_field_errors }}
+      {% for field in profile_form %}
+        <div class="field"><label class="label" for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{{ field.errors }}</div>
+      {% endfor %}
+      <button class="btn" name="save_profile" value="1">Зберегти профіль</button>
+    </div>
+  </form>
+
+  <form method="post" class="card" novalidate>{% csrf_token %}
+    <div class="card-head">Зміна пароля</div>
+    <div class="card-body">
+      {{ password_form.non_field_errors }}
+      {% for field in password_form %}
+        <div class="field"><label class="label" for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}
+          {% if field.help_text %}<span class="helptext">{{ field.help_text|safe }}</span>{% endif %}{{ field.errors }}</div>
+      {% endfor %}
+      <button class="btn" name="change_password" value="1">Змінити пароль</button>
+    </div>
+  </form>
+</div>
+
+<div class="card" style="max-width:520px"><div class="card-head">Дані в базі MySQL</div>
+  <table class="tb"><tbody>
+  {% for name, count in counts %}<tr><td>{{ name }}</td><td class="r"><b>{{ count }}</b></td></tr>{% endfor %}
+  </tbody></table></div>
+{% endblock %}

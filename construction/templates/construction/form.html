@@ -1,0 +1,27 @@
+{% extends "construction/base.html" %}
+{% block title %}{{ title }} — БудПроєкт{% endblock %}
+{% block heading %}{{ title }}{% endblock %}
+{% block description %}Заповніть поля та натисніть «Зберегти».{% endblock %}
+{% block content %}
+<form method="post" class="card" style="max-width:680px" novalidate>
+  {% csrf_token %}
+  <input type="hidden" name="next" value="{{ next }}">
+  <div class="card-body">
+    {{ form.non_field_errors }}
+    {% for field in form %}
+      <div class="field">
+        {% if field.field.widget.input_type == "checkbox" %}
+          <label for="{{ field.id_for_label }}" style="cursor:pointer">{{ field }} {{ field.label }}</label>
+        {% else %}
+          <label class="label" for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} *{% endif %}</label>
+          {{ field }}
+        {% endif %}
+        {% if field.help_text %}<span class="helptext">{{ field.help_text }}</span>{% endif %}
+        {{ field.errors }}
+      </div>
+    {% endfor %}
+    <button class="btn" type="submit">Зберегти</button>
+    <a class="btn btn-ghost" href="{{ cancel_url }}">Скасувати</a>
+  </div>
+</form>
+{% endblock %}

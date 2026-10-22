@@ -1,0 +1,97 @@
+{% extends "construction/base.html" %}
+{% block title %}Головна — БудПроєкт{% endblock %}
+{% block heading %}Головна{% endblock %}
+{% block description %}Загальний стан проєктів, бюджету та завдань.{% endblock %}
+{% block actions %}<a class="btn" href="{% url 'project_create' %}">Новий проєкт</a>{% endblock %}
+{% block content %}
+<div class="stats">
+  <div class="stat"><span class="n">{{ projects_count }}</span><span class="l">Усього проєктів</span></div>
+  <div class="stat c-warn"><span class="n">{{ active_count }}</span><span class="l">Активні проєкти</span></div>
+  <div class="stat c-ok"><span class="n">{{ completed_count }}</span><span class="l">Завершені проєкти</span></div>
+  <div class="stat c-steel"><span class="n">{{ workers_count }}</span><span class="l">Працівників</span></div>
+  <div class="stat"><span class="n">{{ total_budget|floatformat:"0g" }} ₴</span><span class="l">Загальний бюджет</span></div>
+  <div class="stat c-warn"><span class="n">{{ total_spent|floatformat:"0g" }} ₴</span><span class="l">Загальні витрати</span></div>
+  <div class="stat {% if total_remaining < 0 %}c-bad{% else %}c-ok{% endif %}"><span class="n {% if total_remaining < 0 %}neg{% endif %}">{{ total_remaining|floatformat:"0g" }} ₴</span><span class="l">Залишок бюджету</span></div>
+  <div class="stat c-bad"><span class="n">{{ unfinished_count }}</span><span class="l">Незавершених завдань</span></div>
+</div>
+
+{% for p in alerts %}
+  {% if p.over_budget %}
+    <div class="alert alert-error"><span><b>Бюджет перевищено:</b> <a href="{{ p.get_absolute_url }}">{{ p.name }}</a> — витрати {{ p.spent|floatformat:"0g" }} ₴ при бюджеті {{ p.budget|floatformat:"0g" }} ₴.</span></div>
+  {% else %}
+    <div class="alert alert-warning"><span><b>Бюджет майже вичерпано:</b> <a href="{{ p.get_absolute_url }}">{{ p.name }}</a> — використано {{ p.budget_percent }}%.</span></div>
+  {% endif %}
+{% endfor %}
+
+<div class="grid g32">
+  <div class="card">
+    <div class="card-head">Останні проєкти <a class="small" href="{% url 'project_list' %}">усі проєкти →</a></div>
+    {% if recent_projects %}
+    <div style="overflow-x:auto"><table class="tb">
+      <thead><tr><th>Проєкт</th><th>Статус</th><th>Бюджет використано</th><th>Прогрес завдань</th></tr></thead>
+      <tbody>
+      {% for p in recent_projects %}
+        <tr>
+          <td><a href="{{ p.get_absolute_url }}">{{ p.name }}</a><div class="muted small">{{ p.address }}</div></td>
+          <td><span class="stt {{ p.status }}">{{ p.get_status_display }}</span></td>
+          <td style="min-width:140px"><div class="pct"><div class="bar {% if p.over_budget %}bad{% else %}w{% endif %}"><i style="width:{{ p.budget_bar }}%"></i></div><span class="{% if p.over_budget %}neg{% endif %}">{{ p.budget_percent }}%</span></div></td>
+          <td style="min-width:140px"><div class="pct"><div class="bar ok"><i style="width:{{ p.progress }}%"></i></div><span>{{ p.progress }}%</span></div></td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table></div>
+    {% else %}
+    <div class="emptybox">Проєктів ще немає.<br><a class="btn" href="{% url 'project_create' %}">Додати перший проєкт</a></div>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <div class="card-head">Найближчі завдання <a class="small" href="{% url 'task_list' %}">усі →</a></div>
+    <div class="card-body" style="padding-top:.3rem;padding-bottom:.3rem">
+    {% for t in upcoming %}
+      <div class="dt {% if t.is_overdue %}hot{% endif %}">
+        <div class="d"><b>{{ t.due_date|date:"d" }}</b><span>{{ t.due_date|date:"M" }}</span></div>
+        <div><div>{{ t.title }}</div>
+          <a class="muted small" href="{{ t.project.get_absolute_url }}">{{ t.project.name }}</a>
+          {% if t.is_overdue %}<span class="late-t"> · прострочено</span>{% endif %}</div>
+      </div>
+    {% empty %}
+      <div class="emptybox">Незавершених завдань немає.
+        {% if projects_count %}<br><a class="btn btn-outline btn-sm" href="{% url 'task_create' %}">Додати завдання</a>
+        {% else %}<br><span class="small">Спочатку створіть проєкт.</span>{% endif %}</div>
+    {% endfor %}
+    </div>
+  </div>
+</div>
+
+<div class="grid g32">
+  <div class="card">
+    <div class="card-head">Витрати за місяцями <small>останні 6 місяців, ₴</small></div>
+    <div class="card-body">
+    {% if chart_has_data %}
+      <div class="cols">
+        {% for c in chart %}
+          <div class="col"><span class="v">{% if c.total %}{{ c.total|floatformat:"0g" }}{% endif %}</span><div class="b" style="height:{{ c.height }}%"></div><span class="m">{{ c.label }}</span></div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="emptybox">Витрат за цей період ще немає.
+        {% if projects_count %}<br><a class="btn" href="{% url 'expense_create' %}">Додати першу витрату</a>
+        {% else %}<br><span class="small">Спочатку створіть проєкт.</span>{% endif %}</div>
+    {% endif %}
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head">Витрати за категоріями</div>
+    <div class="card-body">
+    {% if categories %}
+      <div class="seg">{% for c in categories %}<i class="cat-{{ c.key }}" style="width:{{ c.percent }}%"></i>{% endfor %}</div>
+      <div class="legend">{% for c in categories %}<div><span class="cat-{{ c.key }}">{{ c.label }} · {{ c.percent }}%</span><b>{{ c.total|floatformat:"0g" }} ₴</b></div>{% endfor %}</div>
+    {% else %}
+      <div class="emptybox">Даних для розподілу ще немає.</div>
+    {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

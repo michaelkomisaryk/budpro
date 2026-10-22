@@ -1,0 +1,52 @@
+{% extends "construction/base.html" %}
+{% block title %}Звіти — БудПроєкт{% endblock %}
+{% block heading %}Звіти{% endblock %}
+{% block description %}Бюджет і фактичні витрати за проєктами, категоріями та періодом.{% endblock %}
+{% block actions %}<a class="btn btn-outline" href="{% url 'report_csv' %}?{{ request.GET.urlencode }}">Експорт у CSV</a>{% endblock %}
+{% block content %}
+<form class="filters" method="get">
+  <div><label class="label">Період: від</label><input class="input" type="date" name="date_from" value="{{ date_from|date:'Y-m-d' }}"></div>
+  <div><label class="label">до</label><input class="input" type="date" name="date_to" value="{{ date_to|date:'Y-m-d' }}"></div>
+  <button class="btn">Застосувати</button>
+  {% if date_from or date_to %}<a class="btn btn-ghost" href="{% url 'report_list' %}">Скинути період</a>{% endif %}
+</form>
+
+<div class="stats">
+  <div class="stat"><span class="n">{{ total_budget|floatformat:"0g" }} ₴</span><span class="l">Бюджет усіх проєктів</span></div>
+  <div class="stat c-warn"><span class="n">{{ total_spent|floatformat:"0g" }} ₴</span><span class="l">Фактичні витрати (за весь час)</span></div>
+  <div class="stat c-steel"><span class="n">{{ period_total|floatformat:"0g" }} ₴</span><span class="l">Витрати за вибраний період</span></div>
+  <div class="stat"><span class="n">{{ period_count }}</span><span class="l">Витрат за вибраний період</span></div>
+</div>
+
+<div class="sec" style="margin-top:1.4rem"><h2>Плановий бюджет і фактичні витрати</h2></div>
+<div class="tbw"><table class="tb"><thead><tr><th>Проєкт</th><th>Порівняння</th><th class="r">Бюджет, ₴</th><th class="r">Витрати, ₴</th><th class="r">Залишок, ₴</th><th class="r">%</th><th class="r">За період, ₴</th></tr></thead><tbody>
+{% for r in rows %}
+  <tr><td><a href="{{ r.project.get_absolute_url }}">{{ r.project.name }}</a><div class="muted small">{{ r.project.get_status_display }}</div></td>
+    <td style="min-width:170px"><div class="cmp"><div class="bar"><i style="width:{{ r.budget_width }}%"></i></div><div class="bar {% if r.project.over_budget %}bad{% else %}w{% endif %}"><i style="width:{{ r.spent_width }}%"></i></div></div></td>
+    <td class="r">{{ r.project.budget|floatformat:"0g" }}</td><td class="r">{{ r.spent|floatformat:"0g" }}</td>
+    <td class="r {% if r.project.over_budget %}neg{% endif %}">{{ r.project.remaining|floatformat:"0g" }}</td>
+    <td class="r {% if r.project.over_budget %}neg{% endif %}">{{ r.project.budget_percent }}%</td>
+    <td class="r">{{ r.period|floatformat:"0g" }}</td></tr>
+{% empty %}<tr><td colspan="7" class="empty">Проєктів ще немає.</td></tr>{% endfor %}
+</tbody></table></div>
+<p class="muted small" style="margin-top:.5rem">Верхня смуга — бюджет, нижня — фактичні витрати (масштаб для кожного проєкту свій). Червона смуга означає перевищення бюджету.</p>
+
+<div class="grid g2" style="margin-top:1.5rem">
+  <div class="card"><div class="card-head">Витрати за категоріями <small>за вибраний період</small></div><div class="card-body">
+    {% if category_rows %}
+      <div class="seg">{% for c in category_rows %}<i class="cat-{{ c.key }}" style="width:{{ c.percent }}%"></i>{% endfor %}</div>
+      <div class="legend">{% for c in category_rows %}<div><span class="cat-{{ c.key }}">{{ c.label }} · {{ c.percent }}%</span><b>{{ c.total|floatformat:"0g" }} ₴</b></div>{% endfor %}</div>
+    {% else %}<div class="emptybox">За цей період витрат немає.</div>{% endif %}
+  </div></div>
+  <div class="card"><div class="card-head">Витрати за місяцями <small>за вибраний період</small></div><div class="card-body">
+    {% if month_rows %}<div class="legend" style="margin-top:0">{% for r in month_rows %}<div><span style="--c:transparent">{{ r.label }}</span><b>{{ r.total|floatformat:"0g" }} ₴</b></div>{% endfor %}</div>
+    {% else %}<div class="emptybox">За цей період витрат немає.</div>{% endif %}
+  </div></div>
+</div>
+
+<div class="card"><div class="card-head">Найвитратніші проєкти <small>за весь час</small></div>
+  <table class="tb"><tbody>
+  {% for r in top %}<tr><td>{{ forloop.counter }}.</td><td><a href="{{ r.project.get_absolute_url }}">{{ r.project.name }}</a></td><td class="r"><b>{{ r.spent|floatformat:"0g" }} ₴</b></td></tr>
+  {% empty %}<tr><td class="empty">Даних ще немає.</td></tr>{% endfor %}
+  </tbody></table></div>
+{% endblock %}

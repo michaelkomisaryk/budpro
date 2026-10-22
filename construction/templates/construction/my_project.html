@@ -1,0 +1,39 @@
+{% extends "construction/base.html" %}
+{% block title %}Проєкт і матеріали — БудПроєкт{% endblock %}
+{% block heading %}{% if project %}{{ project.name }}{% else %}Мій проєкт{% endif %}{% endblock %}
+{% block description %}{% if project %}{{ project.address }}{% else %}Вас ще не прикріплено до проєкту.{% endif %}{% endblock %}
+{% block content %}
+{% if not project %}
+  <div class="card"><div class="emptybox">Зверніться до директора: він має прикріпити вас до проєкту.</div></div>
+{% else %}
+<div class="grid g2">
+  <div class="card"><div class="card-head">Про проєкт</div><div class="card-body">
+    <dl class="kv">
+      <dt>Статус</dt><dd><span class="stt {{ project.status }}">{{ project.get_status_display }}</span></dd>
+      <dt>Терміни</dt><dd>{{ project.start_date|date:"d.m.Y" }} – {{ project.end_date|date:"d.m.Y" }}</dd>
+      <dt>Готовність</dt><dd><div class="pct"><div class="bar ok"><i style="width:{{ project.progress }}%"></i></div><span>{{ project.progress }}%</span></div></dd>
+      <dt>Опис</dt><dd>{{ project.description|default:"—"|linebreaksbr }}</dd>
+    </dl>
+  </div></div>
+  <div class="card"><div class="card-head">Команда</div>
+    <table class="tb"><tbody>
+      <tr><td><span class="av av{{ worker.tone }}">{{ worker.initials }}</span>{{ worker.full_name }} <span class="muted">(ви)</span></td><td>{{ worker.get_position_display }}</td></tr>
+      {% for w in team %}<tr><td><span class="av av{{ w.tone }}">{{ w.initials }}</span>{{ w.full_name }}</td><td>{{ w.get_position_display }}</td></tr>{% endfor %}
+    </tbody></table></div>
+</div>
+
+<div class="sec"><h2>Матеріали на проєкті</h2></div>
+<div class="tbw"><table class="tb"><thead><tr><th>Матеріал</th><th class="r">Кількість</th></tr></thead><tbody>
+{% for m in materials %}<tr><td>{{ m.name }}</td><td class="r nw">{{ m.quantity|floatformat:"-2g" }} {{ m.get_unit_display }}</td></tr>
+{% empty %}<tr><td colspan="2" class="empty">Матеріалів для проєкту ще не додано.</td></tr>{% endfor %}
+</tbody></table></div>
+
+<div class="sec"><h2>Усі завдання проєкту</h2></div>
+<div class="tbw"><table class="tb"><thead><tr><th>Завдання</th><th>Виконавець</th><th>Термін</th><th>Статус</th></tr></thead><tbody>
+{% for t in project_tasks %}
+  <tr class="{% if t.is_overdue %}late{% endif %}"><td>{{ t.title }}</td><td>{{ t.assignee.full_name|default:"—" }}</td>
+    <td class="nw">{{ t.due_date|date:"d.m.Y" }}</td><td><span class="stt {{ t.status }}">{{ t.get_status_display }}</span></td></tr>
+{% empty %}<tr><td colspan="4" class="empty">Завдань ще немає.</td></tr>{% endfor %}
+</tbody></table></div>
+{% endif %}
+{% endblock %}

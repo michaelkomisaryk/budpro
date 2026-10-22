@@ -1,0 +1,39 @@
+{% extends "construction/base.html" %}
+{% block title %}Завдання — БудПроєкт{% endblock %}
+{% block heading %}Завдання{% endblock %}
+{% block description %}Усі завдання за проєктами. Прострочені виділені червоним.{% endblock %}
+{% block actions %}<a class="btn" href="{% url 'task_create' %}">Нове завдання</a>{% endblock %}
+{% block content %}
+<form class="filters" method="get">
+  <div class="grow"><label class="label">Пошук за назвою</label><input class="input" name="q" value="{{ q }}" placeholder="Назва завдання"></div>
+  <div><label class="label">Проєкт</label>
+    <select class="select" name="project" data-autosubmit><option value="">Усі проєкти</option>
+      {% for p in projects %}<option value="{{ p.pk }}" {% if project_id == p.pk|stringformat:"d" %}selected{% endif %}>{{ p.name }}</option>{% endfor %}
+    </select></div>
+  <div><label class="label">Виконавець</label>
+    <select class="select" name="assignee" data-autosubmit><option value="">Усі виконавці</option>
+      {% for w in workers %}<option value="{{ w.pk }}" {% if assignee_id == w.pk|stringformat:"d" %}selected{% endif %}>{{ w.full_name }}</option>{% endfor %}
+    </select></div>
+  <div><label class="label">Статус</label>
+    <select class="select" name="status" data-autosubmit><option value="">Усі статуси</option>
+      {% for value, label in statuses %}<option value="{{ value }}" {% if status == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+    </select></div>
+  <button class="btn btn-outline">Знайти</button>
+  {% if q or project_id or status or assignee_id %}<a class="btn btn-ghost" href="{% url 'task_list' %}">Скинути</a>{% endif %}
+</form>
+<div class="tbw"><table class="tb"><thead><tr><th>Завдання</th><th>Проєкт</th><th>Виконавець</th><th>Термін</th><th>Статус</th><th></th></tr></thead><tbody>
+{% for t in tasks %}
+  <tr class="{% if t.is_overdue %}late{% endif %}">
+    <td>{{ t.title }}{% if t.description %}<div class="muted small">{{ t.description|truncatechars:80 }}</div>{% endif %}</td>
+    <td><a href="{{ t.project.get_absolute_url }}">{{ t.project.name }}</a></td>
+    <td>{{ t.assignee.full_name|default:"—" }}</td>
+    <td class="nw">{{ t.due_date|date:"d.m.Y" }}{% if t.is_overdue %}<br><span class="late-t">прострочено</span>{% endif %}</td>
+    <td><span class="stt {{ t.status }}">{{ t.get_status_display }}</span></td>
+    <td class="r nw act">
+      {% if t.status != 'done' %}<form method="post" action="{% url 'task_done' t.pk %}">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}"><button>виконано</button></form>{% endif %}
+      <a href="{% url 'task_edit' t.pk %}">змінити</a><a class="del" href="{% url 'task_delete' t.pk %}">видалити</a>
+    </td>
+  </tr>
+{% empty %}<tr><td colspan="6" class="empty">{% if q or project_id or status or assignee_id %}Завдань за цими умовами не знайдено.{% else %}Завдань ще немає. <a href="{% url 'task_create' %}">Додати перше завдання</a>{% endif %}</td></tr>{% endfor %}
+</tbody></table></div>
+{% endblock %}

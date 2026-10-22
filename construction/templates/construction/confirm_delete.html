@@ -1,0 +1,18 @@
+{% extends "construction/base.html" %}
+{% block title %}{{ title }} — БудПроєкт{% endblock %}
+{% block heading %}{{ title }}{% endblock %}
+{% block description %}Цю дію не можна скасувати.{% endblock %}
+{% block content %}
+<form method="post" class="card" style="max-width:600px">
+  {% csrf_token %}
+  <input type="hidden" name="next" value="{{ next }}">
+  <div class="card-body">
+    <p>Ви справді хочете видалити «<b>{{ obj }}</b>»?</p>
+    {% if text %}<p class="muted small" style="margin-top:.6rem">{{ text }}</p>{% endif %}
+    <div style="margin-top:1.2rem">
+      <button class="btn btn-danger" type="submit">Так, видалити</button>
+      <a class="btn btn-ghost" href="{{ cancel_url }}">Скасувати</a>
+    </div>
+  </div>
+</form>
+{% endblock %}

@@ -1,0 +1,31 @@
+{% extends "construction/base.html" %}
+{% block title %}Моя зарплата — БудПроєкт{% endblock %}
+{% block heading %}Моя зарплата{% endblock %}
+{% block description %}Зарплата = відпрацьовані години × ставка. Ставка фіксується на момент запису годин.{% endblock %}
+{% block content %}
+<form class="filters" method="get">
+  <div><label class="label">Місяць</label><input class="input" type="month" name="month" value="{{ month.value }}"></div>
+  <button class="btn btn-outline">Показати</button>
+</form>
+<div class="stats">
+  <div class="stat c-steel"><span class="n">{{ worker.hourly_rate|floatformat:"2g" }} ₴</span><span class="l">Ставка за годину</span></div>
+  <div class="stat c-warn"><span class="n">{{ hours|floatformat:"-2" }} год</span><span class="l">Відпрацьовано, {{ month.label }} ({{ days }} дн.)</span></div>
+  <div class="stat c-ok"><span class="n">{{ pay|floatformat:"2g" }} ₴</span><span class="l">До виплати за {{ month.label }}</span></div>
+  <div class="stat"><span class="n">{{ done_total }}</span><span class="l">Виконано завдань загалом</span></div>
+</div>
+<div class="grid g2">
+  <div>
+    <div class="sec" style="margin-top:0"><h2>Як нараховано</h2></div>
+    <div class="tbw"><table class="tb"><thead><tr><th>Завдання</th><th class="r">Години</th><th class="r">Сума, ₴</th></tr></thead><tbody>
+    {% for r in by_task %}<tr><td>{{ r.task__title|default:"—" }}</td><td class="r">{{ r.total_hours|floatformat:"-2" }}</td><td class="r">{{ r.total_pay|floatformat:"2g" }}</td></tr>
+    {% empty %}<tr><td colspan="3" class="empty">За цей місяць годин ще немає. <a href="{% url 'my_hours' %}">Записати години</a></td></tr>{% endfor %}
+    </tbody>{% if by_task %}<tfoot><tr><td>Разом</td><td class="r">{{ hours|floatformat:"-2" }}</td><td class="r">{{ pay|floatformat:"2g" }}</td></tr></tfoot>{% endif %}</table></div>
+  </div>
+  <div>
+    <div class="sec" style="margin-top:0"><h2>Останні місяці</h2></div>
+    <div class="tbw"><table class="tb"><thead><tr><th>Місяць</th><th class="r">Години</th><th class="r">Сума, ₴</th></tr></thead><tbody>
+    {% for h in history %}<tr><td><a href="?month={{ h.value }}">{{ h.label }}</a></td><td class="r">{{ h.hours|floatformat:"-2" }}</td><td class="r">{{ h.pay|floatformat:"2g" }}</td></tr>{% endfor %}
+    </tbody></table></div>
+  </div>
+</div>
+{% endblock %}

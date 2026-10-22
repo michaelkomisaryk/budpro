@@ -1,0 +1,40 @@
+{% extends "construction/base.html" %}
+{% block title %}Мої години — БудПроєкт{% endblock %}
+{% block heading %}Мої години{% endblock %}
+{% block description %}Записуйте, скільки годин ви відпрацювали. З цього рахується ваша зарплата.{% endblock %}
+{% block content %}
+<div class="grid g23">
+  <form method="post" class="card" novalidate>{% csrf_token %}
+    <div class="card-head">Записати години</div>
+    <div class="card-body">
+    {% if has_tasks %}
+      {{ form.non_field_errors }}
+      {% for field in form %}
+        <div class="field"><label class="label" for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{{ field.errors }}</div>
+      {% endfor %}
+      <button class="btn">Записати</button>
+    {% else %}
+      <p class="muted">Вам ще не призначено завдань, тому записувати години поки нема куди. Зверніться до директора.</p>
+    {% endif %}
+    </div>
+  </form>
+
+  <div>
+    <form class="filters" method="get">
+      <div><label class="label">Місяць</label><input class="input" type="month" name="month" value="{{ month.value }}"></div>
+      <button class="btn btn-outline">Показати</button>
+    </form>
+    <div class="stats" style="grid-template-columns:1fr 1fr">
+      <div class="stat c-steel"><span class="n">{{ hours|floatformat:"-2" }} год</span><span class="l">Відпрацьовано, {{ month.label }}</span></div>
+      <div class="stat"><span class="n">{{ pay|floatformat:"0g" }} ₴</span><span class="l">Нараховано за місяць</span></div>
+    </div>
+    <div class="tbw"><table class="tb"><thead><tr><th>Дата</th><th>Завдання</th><th class="r">Години</th><th class="r">Сума, ₴</th><th></th></tr></thead><tbody>
+    {% for l in logs %}
+      <tr><td class="nw">{{ l.date|date:"d.m.Y" }}</td><td>{{ l.task.title|default:"—" }}{% if l.comment %}<div class="muted small">{{ l.comment }}</div>{% endif %}</td>
+        <td class="r">{{ l.hours|floatformat:"-2" }}</td><td class="r">{{ l.pay|floatformat:"2g" }}</td>
+        <td class="r act"><a class="del" href="{% url 'my_hours_delete' l.pk %}">видалити</a></td></tr>
+    {% empty %}<tr><td colspan="5" class="empty">За цей місяць записів немає.</td></tr>{% endfor %}
+    </tbody></table></div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,31 @@
+{% extends "construction/base.html" %}
+{% block title %}Табель годин — БудПроєкт{% endblock %}
+{% block heading %}Табель годин{% endblock %}
+{% block description %}Години, які записали працівники. З них рахується зарплата.{% endblock %}
+{% block actions %}<a class="btn btn-outline" href="{% url 'payroll' %}?month={{ month.value }}">Зарплати за місяць</a><a class="btn" href="{% url 'timesheet_create' %}">Додати запис</a>{% endblock %}
+{% block content %}
+<form class="filters" method="get">
+  <div><label class="label">Місяць</label><input class="input" type="month" name="month" value="{{ month.value }}"></div>
+  <div><label class="label">Працівник</label>
+    <select class="select" name="worker" data-autosubmit><option value="">Усі працівники</option>
+      {% for w in workers %}<option value="{{ w.pk }}" {% if worker_id == w.pk|stringformat:"d" %}selected{% endif %}>{{ w.full_name }}</option>{% endfor %}
+    </select></div>
+  <div><label class="label">Проєкт</label>
+    <select class="select" name="project" data-autosubmit><option value="">Усі проєкти</option>
+      {% for p in projects %}<option value="{{ p.pk }}" {% if project_id == p.pk|stringformat:"d" %}selected{% endif %}>{{ p.name }}</option>{% endfor %}
+    </select></div>
+  <button class="btn btn-outline">Показати</button>
+</form>
+<div class="stats" style="grid-template-columns:repeat(2,1fr);max-width:560px">
+  <div class="stat c-steel"><span class="n">{{ hours|floatformat:"-2" }} год</span><span class="l">Усього годин, {{ month.label }}</span></div>
+  <div class="stat c-warn"><span class="n">{{ pay|floatformat:"0g" }} ₴</span><span class="l">Нараховано</span></div>
+</div>
+<div class="tbw"><table class="tb"><thead><tr><th>Дата</th><th>Працівник</th><th>Проєкт</th><th>Завдання</th><th class="r">Години</th><th class="r">Ставка</th><th class="r">Сума, ₴</th><th></th></tr></thead><tbody>
+{% for l in logs %}
+  <tr><td class="nw">{{ l.date|date:"d.m.Y" }}</td><td>{{ l.worker.full_name }}</td><td>{{ l.task.project.name|default:"—" }}</td>
+    <td>{{ l.task.title|default:"—" }}{% if l.comment %}<div class="muted small">{{ l.comment }}</div>{% endif %}</td>
+    <td class="r">{{ l.hours|floatformat:"-2" }}</td><td class="r">{{ l.rate|floatformat:"2g" }}</td><td class="r">{{ l.pay|floatformat:"2g" }}</td>
+    <td class="r nw act"><a href="{% url 'timesheet_edit' l.pk %}">змінити</a><a class="del" href="{% url 'timesheet_delete' l.pk %}">видалити</a></td></tr>
+{% empty %}<tr><td colspan="8" class="empty">За цей місяць записів немає.</td></tr>{% endfor %}
+</tbody>{% if logs %}<tfoot><tr><td colspan="4">Разом</td><td class="r">{{ hours|floatformat:"-2" }}</td><td></td><td class="r">{{ pay|floatformat:"2g" }}</td><td></td></tr></tfoot>{% endif %}</table></div>
+{% endblock %}
