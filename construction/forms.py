@@ -1,9 +1,13 @@
 from django import forms
 from django.contrib.auth import password_validation
-from django.contrib.auth.models import User
+from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth.models import Group, User
 from django.core.exceptions import ValidationError
 
+from .access import WORKER_GROUP, for_user
 from .models import CatalogItem, Expense, Material, Project, Task, WorkLog, Worker
+
+AUTOSUBMIT = {"data-autosubmit": "1"}
 
 
 def style_fields(form):
@@ -14,7 +18,8 @@ def style_fields(form):
         elif isinstance(field.widget, forms.Select):
             field.widget.attrs["class"] = "select"
         elif isinstance(field, forms.DateField):
-            field.widget = forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d")
+            attrs = dict(field.widget.attrs)
+            field.widget = forms.DateInput(attrs=attrs | {"type": "date"}, format="%Y-%m-%d")
             field.widget.attrs["class"] = "input"
         else:
             field.widget.attrs["class"] = "input"
@@ -23,9 +28,22 @@ def style_fields(form):
 
 
 class StyledModelForm(forms.ModelForm):
-    def __init__(self, *args, **kwargs):
+    """Базова ModelForm: однаковий вигляд полів і доступ до користувача (user).
+
+    Поля власника (owner) у формах немає: його ставить view у form_valid().
+    user потрібен, щоб у списках вибору були лише ЙОГО проєкти, працівники, завдання.
+    """
+
+    def __init__(self, *args, user=None, **kwargs):
         super().__init__(*args, **kwargs)
+        self.user = user
         style_fields(self)
+
+    def limit(self, field_name, model):
+        """Обмежує вибір у полі записами, до яких має доступ користувач."""
+        if self.user is not None and field_name in self.fields:
+            self.fields[field_name].queryset = for_user(model, self.user)
+        return self.fields.get(field_name)
 
 
 class ProjectForm(StyledModelForm):
@@ -34,19 +52,59 @@ class ProjectForm(StyledModelForm):
         fields = ["name", "address", "description", "budget", "start_date", "end_date", "status"]
         widgets = {"description": forms.Textarea(attrs={"rows": 4})}
 
+    def clean_name(self):
+        """Рівень поля: назва проєкту унікальна серед проєктів цього директора."""
+        name = self.cleaned_data["name"].strip()
+        owner = self.instance.owner if self.instance.owner_id else self.user
+        if owner is not None:
+            clash = Project.objects.filter(owner=owner, name__iexact=name).exclude(pk=self.instance.pk)
+            if clash.exists():
+                raise ValidationError("У вас уже є проєкт з такою назвою.")
+        return name
+
+    def clean(self):
+        """Рівень форми: правила, що залежать від кількох полів."""
+        data = super().clean()
+        status, budget = data.get("status"), data.get("budget")
+        if status == Project.Status.ACTIVE and budget is not None and budget <= 0:
+            self.add_error("budget", "Активний проєкт має мати бюджет більший за нуль.")
+        return data
+
 
 class TaskForm(StyledModelForm):
     class Meta:
         model = Task
-        fields = ["project", "title", "description", "assignee", "due_date", "status"]
-        widgets = {"description": forms.Textarea(attrs={"rows": 3})}
+        fields = ["project", "title", "description", "assignee", "due_date", "status", "materials"]
+        widgets = {"description": forms.Textarea(attrs={"rows": 3}),
+                   "materials": forms.SelectMultiple(attrs={"size": 5})}
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.limit("project", Project)
+        self.limit("assignee", Worker)
+        self.limit("materials", Material)
         self.fields["assignee"].empty_label = "— не призначено —"
-        self.fields["assignee"].queryset = Worker.objects.select_related("project")
+        self.fields["assignee"].queryset = self.fields["assignee"].queryset.select_related("project")
         self.fields["assignee"].label_from_instance = (
             lambda w: f"{w.full_name} — {w.project.name if w.project else 'без проєкту'}")
+        self.fields["materials"].queryset = self.fields["materials"].queryset.select_related("project")
+        self.fields["materials"].label_from_instance = lambda m: f"{m.name} ({m.project.name})"
+        self.fields["materials"].help_text = "Необов'язково. Утримуйте Ctrl, щоб вибрати кілька матеріалів."
+
+    def clean_title(self):
+        title = self.cleaned_data["title"].strip()
+        if len(title) < 3:
+            raise ValidationError("Назва завдання має містити щонайменше 3 символи.")
+        return title
+
+    def clean(self):
+        data = super().clean()
+        project, materials = data.get("project"), data.get("materials")
+        if project and materials:
+            foreign = [m.name for m in materials if m.project_id != project.pk]
+            if foreign:
+                self.add_error("materials", "Матеріали мають належати проєкту завдання: " + ", ".join(foreign) + ".")
+        return data
 
 
 class WorkerForm(StyledModelForm):
@@ -63,6 +121,7 @@ class WorkerForm(StyledModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.limit("project", Project)
         self.fields["project"].empty_label = "— не прикріплено —"
         if self.instance.user_id:
             self.fields["username"].initial = self.instance.user.username
@@ -98,6 +157,8 @@ class WorkerForm(StyledModelForm):
             if password:
                 user.set_password(password)
             user.save()
+            group, _ = Group.objects.get_or_create(name=WORKER_GROUP)
+            user.groups.add(group)
             if worker.user_id != user.pk:
                 worker.user = user
                 worker.save()
@@ -132,6 +193,7 @@ class MaterialForm(StyledModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.limit("project", Project)
         self.fields["catalog_item"].label_from_instance = (
             lambda item: f"{item.name} — {item.unit_price} ₴ / {item.get_unit_display()}"
                          f"{' · своя' if item.is_custom else ''}")
@@ -156,6 +218,16 @@ class ExpenseForm(StyledModelForm):
         fields = ["project", "title", "category", "amount", "date", "description"]
         widgets = {"description": forms.Textarea(attrs={"rows": 3})}
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.limit("project", Project)
+
+    def clean_amount(self):
+        amount = self.cleaned_data["amount"]
+        if amount <= 0:
+            raise ValidationError("Сума витрати має бути більшою за нуль.")
+        return amount
+
 
 class WorkLogForm(StyledModelForm):
     class Meta:
@@ -166,7 +238,9 @@ class WorkLogForm(StyledModelForm):
         """Якщо передано worker (форма працівника): поле «Працівник» ховається, завдання - лише його."""
         super().__init__(*args, **kwargs)
         self.fields["hours"].widget.attrs.update({"step": "0.25", "min": "0.25", "max": "24"})
-        self.fields["task"].queryset = Task.objects.select_related("project")
+        self.limit("worker", Worker)
+        self.limit("task", Task)
+        self.fields["task"].queryset = self.fields["task"].queryset.select_related("project")
         self.fields["task"].label_from_instance = lambda t: f"{t.title} — {t.project.name}"
         self.fields["worker"].label_from_instance = lambda w: w.full_name
         if worker:
@@ -180,3 +254,89 @@ class ProfileForm(StyledModelForm):
         model = User
         fields = ["first_name", "last_name", "email"]
         labels = {"first_name": "Ім'я", "last_name": "Прізвище", "email": "Електронна пошта"}
+
+
+class RegisterForm(UserCreationForm):
+    """Реєстрація нового директора (UserCreationForm + ім'я та пошта)."""
+
+    email = forms.EmailField(required=True, label="Електронна пошта",
+                             error_messages={"required": "Вкажіть електронну пошту.",
+                                             "invalid": "Введіть коректну адресу електронної пошти."})
+
+    class Meta(UserCreationForm.Meta):
+        model = User
+        fields = ("username", "first_name", "last_name", "email")
+        labels = {"first_name": "Ім'я", "last_name": "Прізвище"}
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        style_fields(self)
+        self.fields["first_name"].required = True
+        self.fields["last_name"].required = True
+
+    def clean_email(self):
+        email = self.cleaned_data["email"].strip().lower()
+        if User.objects.filter(email__iexact=email).exists():
+            raise ValidationError("Користувач з такою електронною поштою вже зареєстрований.")
+        return email
+
+
+# ---------------------------------------------------------------- форми без моделі (пошук і фільтри, GET)
+PROJECT_SORTS = {
+    "new": ("-start_date", "Дата початку: спочатку нові"),
+    "old": ("start_date", "Дата початку: спочатку старі"),
+    "budget_desc": ("-budget", "Бюджет: від більшого"),
+    "budget_asc": ("budget", "Бюджет: від меншого"),
+}
+
+
+class ProjectFilterForm(forms.Form):
+    q = forms.CharField(required=False, label="Пошук за назвою або адресою", max_length=100,
+                        widget=forms.TextInput(attrs={"placeholder": "Введіть назву проєкту"}))
+    status = forms.ChoiceField(required=False, label="Статус", widget=forms.Select(attrs=AUTOSUBMIT),
+                               choices=[("", "Усі статуси")] + list(Project.Status.choices))
+    sort = forms.ChoiceField(required=False, label="Сортування", widget=forms.Select(attrs=AUTOSUBMIT),
+                             choices=[(key, value[1]) for key, value in PROJECT_SORTS.items()])
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        style_fields(self)
+
+    def clean_q(self):
+        return self.cleaned_data["q"].strip()
+
+
+class TaskFilterForm(forms.Form):
+    q = forms.CharField(required=False, label="Пошук за назвою", max_length=100,
+                        widget=forms.TextInput(attrs={"placeholder": "Назва завдання"}))
+    project = forms.ModelChoiceField(required=False, label="Проєкт", queryset=Project.objects.none(),
+                                     empty_label="Усі проєкти", widget=forms.Select(attrs=AUTOSUBMIT))
+    assignee = forms.ModelChoiceField(required=False, label="Виконавець", queryset=Worker.objects.none(),
+                                      empty_label="Усі виконавці", widget=forms.Select(attrs=AUTOSUBMIT))
+    status = forms.ChoiceField(required=False, label="Статус", widget=forms.Select(attrs=AUTOSUBMIT),
+                               choices=[("", "Усі статуси")] + list(Task.Status.choices))
+
+    def __init__(self, *args, user, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["project"].queryset = for_user(Project, user)
+        self.fields["assignee"].queryset = for_user(Worker, user)
+        self.fields["assignee"].label_from_instance = lambda w: w.full_name
+        style_fields(self)
+
+
+class PeriodForm(forms.Form):
+    """Період «від - до» для витрат і звітів."""
+
+    date_from = forms.DateField(required=False, label="Від")
+    date_to = forms.DateField(required=False, label="До")
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        style_fields(self)
+
+    def clean(self):
+        data = super().clean()
+        start, end = data.get("date_from"), data.get("date_to")
+        if start and end and end < start:
+            raise ValidationError("Дата «До» не може бути раніше за дату «Від».")
+        return data
