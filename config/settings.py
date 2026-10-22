@@ -8,8 +8,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Налаштування бази беруться з файлу .env (див. .env.example) або зі змінних середовища
 load_dotenv(BASE_DIR / ".env")
 
-SECRET_KEY = os.environ.get("SECRET_KEY", "dev-only-change-me")
-DEBUG = os.environ.get("DEBUG", "1") == "1"
+# SECRET_KEY і DEBUG беруться зі змінних оточення (файл .env). Значення за замовчуванням - лише для розробки.
+SECRET_KEY = os.environ.get("SECRET_KEY") or "dev-only-change-me"
+DEBUG = os.environ.get("DEBUG", "1") in ("1", "true", "True")
 ALLOWED_HOSTS = ["127.0.0.1", "localhost"]
 
 INSTALLED_APPS = [
@@ -22,15 +23,31 @@ INSTALLED_APPS = [
     "construction",
 ]
 
+# Django Debug Toolbar (лише в режимі розробки, якщо пакет встановлено) - підтвердження відсутності N+1
+USE_DEBUG_TOOLBAR = False
+if DEBUG:
+    try:
+        import debug_toolbar  # noqa: F401
+    except ImportError:
+        pass
+    else:
+        USE_DEBUG_TOOLBAR = True
+        INSTALLED_APPS.append("debug_toolbar")
+        INTERNAL_IPS = ["127.0.0.1"]
+
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "construction.middleware.RoleMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
+
+if USE_DEBUG_TOOLBAR:
+    MIDDLEWARE.insert(0, "debug_toolbar.middleware.DebugToolbarMiddleware")
 
 ROOT_URLCONF = "config.urls"
 
@@ -44,6 +61,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "construction.context_processors.roles",
             ],
         },
     },
@@ -51,15 +69,15 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "config.wsgi.application"
 
-# MySQL: база construction_db, хост 127.0.0.1, порт 3306, користувач root
+# MySQL (перевірено на MySQL 8.0 / MariaDB 10.11). Облікові дані - лише зі змінних оточення (.env)
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.mysql",
-        "NAME": os.environ.get("DB_NAME", "construction_db"),
-        "USER": os.environ.get("DB_USER", "root"),
+        "NAME": os.environ.get("DB_NAME", ""),
+        "USER": os.environ.get("DB_USER", ""),
         "PASSWORD": os.environ.get("DB_PASSWORD", ""),
-        "HOST": os.environ.get("DB_HOST", "127.0.0.1"),
-        "PORT": os.environ.get("DB_PORT", "3306"),
+        "HOST": os.environ.get("DB_HOST", ""),
+        "PORT": os.environ.get("DB_PORT", ""),
         "OPTIONS": {"charset": "utf8mb4"},
     }
 }
@@ -80,6 +98,11 @@ USE_THOUSAND_SEPARATOR = True
 STATIC_URL = "static/"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-LOGIN_URL = "login"
-LOGIN_REDIRECT_URL = "dashboard"
-LOGOUT_REDIRECT_URL = "login"
+LOGIN_URL = "construction:login"
+LOGIN_REDIRECT_URL = "construction:dashboard"
+LOGOUT_REDIRECT_URL = "construction:login"
+
+# Скидання пароля: листи виводяться в консоль (для навчального проєкту поштовий сервер не потрібен)
+EMAIL_BACKEND = os.environ.get("EMAIL_BACKEND", "django.core.mail.backends.console.EmailBackend")
+DEFAULT_FROM_EMAIL = "БудПроєкт <noreply@budproject.local>"
+

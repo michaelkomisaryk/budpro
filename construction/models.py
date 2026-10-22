@@ -3,13 +3,35 @@ from functools import cached_property
 
 from django.core.exceptions import ValidationError
 from django.contrib.auth.models import User
-from django.core.validators import MaxValueValidator, MinValueValidator, RegexValidator
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
-from django.db.models import DecimalField, F, Sum
+from django.db.models import Count, DecimalField, F, OuterRef, Q, Subquery, Sum, Value
+from django.db.models.functions import Coalesce
 from django.urls import reverse
 from django.utils import timezone
 
+from .access import is_director
+from .validators import validate_phone, validate_quarter_hour
+
 ZERO = Decimal("0")
+MONEY = DecimalField(max_digits=18, decimal_places=2)
+
+
+class ProjectQuerySet(models.QuerySet):
+    """Проєкти з підрахованими сумами однією вибіркою (без N+1 у списках)."""
+
+    def with_totals(self):
+        def per_project(model, expression):
+            return Subquery(model.objects.filter(project=OuterRef("pk")).order_by().values("project")
+                            .annotate(t=expression).values("t"))
+
+        return self.annotate(
+            spent_total=Coalesce(per_project(Expense, Sum("amount")), Value(ZERO), output_field=MONEY),
+            materials_total=Coalesce(per_project(Material, Sum(F("quantity") * F("unit_price"), output_field=MONEY)),
+                                     Value(ZERO), output_field=MONEY),
+            tasks_total=Coalesce(per_project(Task, Count("pk")), Value(0)),
+            tasks_done=Coalesce(per_project(Task, Count("pk", filter=Q(status="done"))), Value(0)),
+        )
 
 
 class Project(models.Model):
@@ -28,18 +50,27 @@ class Project(models.Model):
     start_date = models.DateField("Дата початку")
     end_date = models.DateField("Планова дата завершення")
     status = models.CharField("Статус", max_length=12, choices=Status.choices, default=Status.PLANNED)
+    # PROTECT: акаунт директора з проєктами не можна видалити - фінансові дані не повинні зникнути разом із ним
+    owner = models.ForeignKey(User, verbose_name="Власник (директор)", on_delete=models.PROTECT,
+                              related_name="projects")
     created_at = models.DateTimeField("Створено", auto_now_add=True)
+
+    objects = ProjectQuerySet.as_manager()
 
     class Meta:
         verbose_name = "Проєкт"
         verbose_name_plural = "Проєкти"
         ordering = ["-created_at"]
+        constraints = [
+            models.UniqueConstraint(fields=["owner", "name"], name="uniq_project_owner_name",
+                                    violation_error_message="У вас уже є проєкт з такою назвою."),
+        ]
 
     def __str__(self):
         return self.name
 
     def get_absolute_url(self):
-        return reverse("project_detail", args=[self.pk])
+        return reverse("construction:project_detail", args=[self.pk])
 
     def clean(self):
         if self.start_date and self.end_date and self.end_date < self.start_date:
@@ -48,6 +79,8 @@ class Project(models.Model):
     # ----- розрахунки бюджету (беруться лише з витрат) -----
     @cached_property
     def spent(self):
+        if hasattr(self, "spent_total"):  # значення вже пораховане в with_totals()
+            return self.spent_total
         return self.expenses.aggregate(total=Sum("amount"))["total"] or ZERO
 
     @property
@@ -73,6 +106,8 @@ class Project(models.Model):
     # ----- матеріали рахуються окремо і до витрат не додаються -----
     @cached_property
     def materials_cost(self):
+        if hasattr(self, "materials_total"):
+            return self.materials_total
         total = self.materials.aggregate(
             total=Sum(F("quantity") * F("unit_price"), output_field=DecimalField(max_digits=18, decimal_places=2)))
         return total["total"] or ZERO
@@ -80,10 +115,12 @@ class Project(models.Model):
     # ----- прогрес і терміни -----
     @cached_property
     def progress(self):
-        total = self.tasks.count()
-        if total == 0:
-            return 0
-        return int(round(self.tasks.filter(status=Task.Status.DONE).count() * 100 / total))
+        if hasattr(self, "tasks_total"):
+            total, done = self.tasks_total, self.tasks_done
+        else:
+            total = self.tasks.count()
+            done = self.tasks.filter(status=Task.Status.DONE).count()
+        return int(round(done * 100 / total)) if total else 0
 
     @property
     def days_left(self):
@@ -109,6 +146,8 @@ class Task(models.Model):
                                  null=True, blank=True, related_name="tasks")
     due_date = models.DateField("Дата завершення")
     status = models.CharField("Статус", max_length=12, choices=Status.choices, default=Status.PENDING)
+    materials = models.ManyToManyField("Material", verbose_name="Матеріали для завдання", blank=True,
+                                       related_name="tasks")
     created_at = models.DateTimeField("Створено", auto_now_add=True)
 
     class Meta:
@@ -118,6 +157,9 @@ class Task(models.Model):
 
     def __str__(self):
         return self.title
+
+    def get_absolute_url(self):
+        return reverse("construction:task_detail", args=[self.pk])
 
     def clean(self):
         errors = {}
@@ -150,15 +192,16 @@ class Worker(models.Model):
     first_name = models.CharField("Ім'я", max_length=100)
     last_name = models.CharField("Прізвище", max_length=100)
     position = models.CharField("Посада", max_length=20, choices=Position.choices, default=Position.BUILDER)
-    phone = models.CharField(
-        "Телефон", max_length=20,
-        validators=[RegexValidator(r"^\+?[0-9\s\-()]{7,20}$", "Введіть коректний номер телефону.")])
+    phone = models.CharField("Телефон", max_length=20, validators=[validate_phone])
     project = models.ForeignKey(Project, verbose_name="Проєкт", on_delete=models.SET_NULL,
                                 null=True, blank=True, related_name="workers")
     hourly_rate = models.DecimalField("Ставка, ₴/год", max_digits=8, decimal_places=2, default=0,
                                       validators=[MinValueValidator(0)])
     user = models.OneToOneField(User, verbose_name="Акаунт для входу", on_delete=models.SET_NULL,
                                 null=True, blank=True, related_name="worker_profile")
+    # PROTECT: як і для проєкту - власника з працівниками не можна видалити випадково
+    owner = models.ForeignKey(User, verbose_name="Власник (директор)", on_delete=models.PROTECT,
+                              related_name="workers_owned")
     created_at = models.DateTimeField("Створено", auto_now_add=True)
 
     class Meta:
@@ -169,11 +212,14 @@ class Worker(models.Model):
     def __str__(self):
         return self.full_name
 
+    def get_absolute_url(self):
+        return reverse("construction:worker_detail", args=[self.pk])
+
     def delete(self, *args, **kwargs):
         """Разом із працівником видаляється його акаунт (але ніколи акаунт директора)."""
         user = self.user
         result = super().delete(*args, **kwargs)
-        if user and not user.is_staff:
+        if user and not is_director(user):
             user.delete()
         return result
 
@@ -219,6 +265,9 @@ class Material(models.Model):
     def __str__(self):
         return self.name
 
+    def get_absolute_url(self):
+        return reverse("construction:material_detail", args=[self.pk])
+
     @property
     def cost(self):
         return self.quantity * self.unit_price
@@ -238,9 +287,16 @@ class CatalogItem(models.Model):
         verbose_name = "Позиція каталогу"
         verbose_name_plural = "Каталог матеріалів"
         ordering = ["name"]
+        constraints = [
+            models.UniqueConstraint(fields=["name", "unit"], name="uniq_catalog_name_unit",
+                                    violation_error_message="Така позиція (назва й одиниця виміру) вже є в каталозі."),
+        ]
 
     def __str__(self):
         return self.name
+
+    def get_absolute_url(self):
+        return reverse("construction:catalog_detail", args=[self.pk])
 
 
 class Expense(models.Model):
@@ -265,9 +321,13 @@ class Expense(models.Model):
         verbose_name = "Витрата"
         verbose_name_plural = "Витрати"
         ordering = ["-date", "-id"]
+        permissions = [("view_finance_reports", "Може переглядати фінансові звіти")]
 
     def __str__(self):
         return self.title
+
+    def get_absolute_url(self):
+        return reverse("construction:expense_detail", args=[self.pk])
 
 
 class WorkLog(models.Model):
@@ -278,7 +338,7 @@ class WorkLog(models.Model):
                              null=True, related_name="logs")
     date = models.DateField("Дата", default=timezone.localdate)
     hours = models.DecimalField("Години", max_digits=5, decimal_places=2,
-                                validators=[MinValueValidator(Decimal("0.25")), MaxValueValidator(24)])
+                                validators=[MinValueValidator(Decimal("0.25")), MaxValueValidator(24), validate_quarter_hour])
     comment = models.CharField("Що зроблено", max_length=255, blank=True)
     rate = models.DecimalField("Ставка на момент запису, ₴/год", max_digits=8, decimal_places=2, default=0)
     created_at = models.DateTimeField("Створено", auto_now_add=True)
@@ -287,9 +347,13 @@ class WorkLog(models.Model):
         verbose_name = "Запис про години"
         verbose_name_plural = "Табель (години)"
         ordering = ["-date", "-id"]
+        permissions = [("manage_payroll", "Може керувати зарплатами та табелем")]
 
     def __str__(self):
         return f"{self.worker} · {self.date} · {self.hours} год"
+
+    def get_absolute_url(self):
+        return reverse("construction:timesheet_detail", args=[self.pk])
 
     def clean(self):
         errors = {}
