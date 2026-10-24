@@ -7,42 +7,16 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'construction/vendor/bootstrap/bootstrap.min.css' %}">
   <link rel="stylesheet" href="{% static 'construction/css/style.css' %}">
 </head>
 <body>
 {% with page=request.resolver_match.url_name %}
 <div class="layout">
-  <aside class="side" id="side">
-    <div class="stripe"></div>
-    <div class="brand"><b>БудПроєкт</b><span>планування та контроль будівництва</span></div>
-    {% if user.is_staff %}
-      <a class="nl {% if page == 'dashboard' %}on{% endif %}" href="{% url 'dashboard' %}">Головна</a>
-      <a class="nl {% if 'project' in page %}on{% endif %}" href="{% url 'project_list' %}">Проєкти</a>
-      <a class="nl {% if 'task' in page %}on{% endif %}" href="{% url 'task_list' %}">Завдання</a>
-      <a class="nl {% if 'worker' in page %}on{% endif %}" href="{% url 'worker_list' %}">Працівники</a>
-      <a class="nl {% if 'material' in page %}on{% endif %}" href="{% url 'material_list' %}">Матеріали</a>
-      <a class="nl {% if 'expense' in page %}on{% endif %}" href="{% url 'expense_list' %}">Витрати</a>
-      <a class="nl {% if 'timesheet' in page %}on{% endif %}" href="{% url 'timesheet_list' %}">Табель годин</a>
-      <a class="nl {% if 'payroll' in page %}on{% endif %}" href="{% url 'payroll' %}">Зарплати</a>
-      <a class="nl {% if 'report' in page %}on{% endif %}" href="{% url 'report_list' %}">Звіти</a>
-    {% else %}
-      <a class="nl {% if page == 'my_tasks' %}on{% endif %}" href="{% url 'my_tasks' %}">Мої завдання</a>
-      <a class="nl {% if 'my_hours' in page %}on{% endif %}" href="{% url 'my_hours' %}">Мої години</a>
-      <a class="nl {% if page == 'my_project' %}on{% endif %}" href="{% url 'my_project' %}">Проєкт і матеріали</a>
-      <a class="nl {% if page == 'my_salary' %}on{% endif %}" href="{% url 'my_salary' %}">Моя зарплата</a>
-    {% endif %}
-    <a class="nl {% if page == 'app_settings' %}on{% endif %}" href="{% url 'app_settings' %}">Налаштування</a>
-    <div class="me">
-      <span class="av av2" style="margin:0">{{ user.username|slice:":2"|upper }}</span>
-      <div>{{ user.get_full_name|default:user.username }}<div class="muted small" style="color:#948f7f">{% if user.is_staff %}Директор{% else %}Працівник{% endif %}</div>
-        <form method="post" action="{% url 'logout' %}">{% csrf_token %}<button>Вийти</button></form></div>
-    </div>
-  </aside>
+  {% include "construction/includes/_sidebar.html" %}
   <main class="content">
     <button class="btn btn-outline btn-sm menu-btn" id="menuBtn" type="button">Меню</button>
-    {% for message in messages %}
-      <div class="alert alert-{{ message.tags }}"><span>{{ message }}</span><button class="alert-x" type="button" aria-label="Закрити">×</button></div>
-    {% endfor %}
+    {% include "construction/includes/_messages.html" %}
     <div class="head">
       <div>{% block crumb %}{% endblock %}<h1 class="t">{% block heading %}{% endblock %}</h1><p class="sub">{% block description %}{% endblock %}</p></div>
       <div class="head-actions">{% block actions %}{% endblock %}</div>

@@ -2,12 +2,12 @@
 {% block title %}Матеріали — БудПроєкт{% endblock %}
 {% block heading %}Матеріали{% endblock %}
 {% block description %}Облік матеріалів: кількість і вартість. Фінансові витрати вносяться окремо на сторінці «Витрати».{% endblock %}
-{% block actions %}<a class="btn btn-outline" href="{% url 'material_catalog' %}">Каталог матеріалів</a><a class="btn" href="{% url 'material_create' %}">Новий матеріал</a>{% endblock %}
+{% block actions %}<a class="btn btn-outline" href="{% url 'construction:material_catalog' %}">Каталог матеріалів</a><a class="btn" href="{% url 'construction:material_create' %}">Новий матеріал</a>{% endblock %}
 {% block content %}
 {% if per_project %}
 <div class="card" style="margin-bottom:1.2rem"><div class="card-head">Вартість матеріалів за проєктами</div>
   <table class="tb"><tbody>
-  {% for r in per_project %}<tr><td><a href="{% url 'project_detail' r.project_id %}">{{ r.project__name }}</a></td><td class="r"><b>{{ r.total|floatformat:"2g" }} ₴</b></td></tr>{% endfor %}
+  {% for r in per_project %}<tr><td><a href="{% url 'construction:project_detail' r.project_id %}">{{ r.project__name }}</a></td><td class="r"><b>{{ r.total|floatformat:"2g" }} ₴</b></td></tr>{% endfor %}
   </tbody></table></div>
 {% endif %}
 <form class="filters" method="get">
@@ -17,13 +17,14 @@
       {% for p in projects %}<option value="{{ p.pk }}" {% if project_id == p.pk|stringformat:"d" %}selected{% endif %}>{{ p.name }}</option>{% endfor %}
     </select></div>
   <button class="btn btn-outline">Знайти</button>
-  {% if q or project_id %}<a class="btn btn-ghost" href="{% url 'material_list' %}">Скинути</a>{% endif %}
+  {% if q or project_id %}<a class="btn btn-ghost" href="{% url 'construction:material_list' %}">Скинути</a>{% endif %}
 </form>
 <div class="tbw"><table class="tb"><thead><tr><th>Матеріал</th><th>Проєкт</th><th class="r">Кількість</th><th class="r">Ціна за од., ₴</th><th class="r">Вартість, ₴</th><th></th></tr></thead><tbody>
 {% for m in materials %}
-  <tr><td>{{ m.name }}</td><td><a href="{{ m.project.get_absolute_url }}">{{ m.project.name }}</a></td>
+  <tr><td><a href="{{ m.get_absolute_url }}">{{ m.name }}</a></td><td><a href="{{ m.project.get_absolute_url }}">{{ m.project.name }}</a></td>
     <td class="r nw">{{ m.quantity|floatformat:"-2g" }} {{ m.get_unit_display }}</td><td class="r">{{ m.unit_price|floatformat:"2g" }}</td><td class="r">{{ m.cost|floatformat:"2g" }}</td>
-    <td class="r nw act"><a href="{% url 'material_edit' m.pk %}">змінити</a><a class="del" href="{% url 'material_delete' m.pk %}">видалити</a></td></tr>
-{% empty %}<tr><td colspan="6" class="empty">{% if q or project_id %}Матеріалів за цими умовами не знайдено.{% else %}Матеріалів ще немає. <a href="{% url 'material_create' %}">Додати перший матеріал</a>{% endif %}</td></tr>{% endfor %}
-</tbody>{% if materials %}<tfoot><tr><td colspan="4">Разом за вибраними матеріалами</td><td class="r">{{ total_cost|floatformat:"2g" }}</td><td></td></tr></tfoot>{% endif %}</table></div>
+    <td class="r nw act"><a href="{% url 'construction:material_edit' m.pk %}">змінити</a><a class="del" href="{% url 'construction:material_delete' m.pk %}">видалити</a></td></tr>
+{% empty %}<tr><td colspan="6" class="empty">{% if q or project_id %}Матеріалів за цими умовами не знайдено.{% else %}Матеріалів ще немає. <a href="{% url 'construction:material_create' %}">Додати перший матеріал</a>{% endif %}</td></tr>{% endfor %}
+</tbody>{% if materials %}<tfoot><tr><td colspan="4">Разом за всіма знайденими матеріалами</td><td class="r">{{ total_cost|floatformat:"2g" }}</td><td></td></tr></tfoot>{% endif %}</table></div>
+{% include "construction/includes/_pagination.html" %}
 {% endblock %}

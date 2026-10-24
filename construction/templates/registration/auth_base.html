@@ -1,0 +1,25 @@
+{% load static %}<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}БудПроєкт{% endblock %}</title>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'construction/vendor/bootstrap/bootstrap.min.css' %}">
+  <link rel="stylesheet" href="{% static 'construction/css/style.css' %}">
+</head>
+<body>
+<div class="auth">
+  <div class="l"><div class="stripe"></div>
+    <h2>Планування, контроль і супровід будівельних проєктів</h2>
+    <ul><li>Проєкти, завдання та терміни</li><li>Бюджет і фактичні витрати</li><li>Працівники, матеріали та звіти</li></ul>
+  </div>
+  <div class="r2">
+    <div class="auth-form">
+      {% include "construction/includes/_messages.html" %}
+      {% block auth_form %}{% endblock %}
+    </div>
+  </div>
+</div>
+</body>
+</html>

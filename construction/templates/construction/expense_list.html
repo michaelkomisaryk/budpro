@@ -2,8 +2,9 @@
 {% block title %}Витрати — БудПроєкт{% endblock %}
 {% block heading %}Витрати{% endblock %}
 {% block description %}Фактичні фінансові витрати. Саме вони враховуються в контролі бюджету.{% endblock %}
-{% block actions %}<a class="btn" href="{% url 'expense_create' %}">Нова витрата</a>{% endblock %}
+{% block actions %}<a class="btn" href="{% url 'construction:expense_create' %}">Нова витрата</a>{% endblock %}
 {% block content %}
+{% if period_form.non_field_errors %}<div class="alert alert-error"><span>{{ period_form.non_field_errors|striptags }}</span></div>{% endif %}
 <form class="filters" method="get">
   <div class="grow"><label class="label">Пошук за назвою</label><input class="input" name="q" value="{{ q }}" placeholder="Назва витрати"></div>
   <div><label class="label">Проєкт</label>
@@ -17,17 +18,18 @@
   <div><label class="label">Від</label><input class="input" type="date" name="date_from" value="{{ date_from|date:'Y-m-d' }}"></div>
   <div><label class="label">До</label><input class="input" type="date" name="date_to" value="{{ date_to|date:'Y-m-d' }}"></div>
   <button class="btn btn-outline">Знайти</button>
-  {% if q or project_id or category or date_from or date_to %}<a class="btn btn-ghost" href="{% url 'expense_list' %}">Скинути</a>{% endif %}
+  {% if filters_active %}<a class="btn btn-ghost" href="{% url 'construction:expense_list' %}">Скинути</a>{% endif %}
 </form>
 
 <div class="grid g32">
   <div class="tbw"><table class="tb"><thead><tr><th>Дата</th><th>Витрата</th><th>Проєкт</th><th>Категорія</th><th class="r">Сума, ₴</th><th></th></tr></thead><tbody>
   {% for e in expenses %}
-    <tr><td class="nw">{{ e.date|date:"d.m.Y" }}</td><td>{{ e.title }}{% if e.description %}<div class="muted small">{{ e.description|truncatechars:60 }}</div>{% endif %}</td>
+    <tr><td class="nw">{{ e.date|date:"d.m.Y" }}</td><td><a href="{{ e.get_absolute_url }}">{{ e.title }}</a>{% if e.description %}<div class="muted small">{{ e.description|truncatechars:60 }}</div>{% endif %}</td>
       <td><a href="{{ e.project.get_absolute_url }}">{{ e.project.name }}</a></td><td>{{ e.get_category_display }}</td><td class="r">{{ e.amount|floatformat:"2g" }}</td>
-      <td class="r nw act"><a href="{% url 'expense_edit' e.pk %}">змінити</a><a class="del" href="{% url 'expense_delete' e.pk %}">видалити</a></td></tr>
-  {% empty %}<tr><td colspan="6" class="empty">{% if q or project_id or category or date_from or date_to %}Витрат за цими умовами не знайдено.{% else %}Витрат ще немає. <a href="{% url 'expense_create' %}">Додати першу витрату</a>{% endif %}</td></tr>{% endfor %}
-  </tbody>{% if expenses %}<tfoot><tr><td colspan="4">Загальна сума</td><td class="r">{{ total|floatformat:"2g" }}</td><td></td></tr></tfoot>{% endif %}</table></div>
+      <td class="r nw act"><a href="{% url 'construction:expense_edit' e.pk %}">змінити</a><a class="del" href="{% url 'construction:expense_delete' e.pk %}">видалити</a></td></tr>
+  {% empty %}<tr><td colspan="6" class="empty">{% if filters_active %}Витрат за цими умовами не знайдено.{% else %}Витрат ще немає. <a href="{% url 'construction:expense_create' %}">Додати першу витрату</a>{% endif %}</td></tr>{% endfor %}
+  </tbody>{% if expenses %}<tfoot><tr><td colspan="4">Загальна сума (усі знайдені)</td><td class="r">{{ total|floatformat:"2g" }}</td><td></td></tr></tfoot>{% endif %}</table></div>
+  {% include "construction/includes/_pagination.html" %}
 
   <div>
     <div class="card" style="margin-bottom:1rem"><div class="card-head">За категоріями</div><div class="card-body">

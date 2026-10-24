@@ -17,9 +17,9 @@
     <td>{% if r.worker.project %}<a href="{{ r.worker.project.get_absolute_url }}">{{ r.worker.project.name }}</a>{% else %}<span class="muted">не прикріплено</span>{% endif %}</td>
     <td class="r">{{ r.worker.hourly_rate|floatformat:"2g" }}</td><td class="r">{{ r.hours|floatformat:"-2" }}</td><td class="r"><b>{{ r.pay|floatformat:"2g" }}</b></td>
     <td>{% if r.posted %}<span class="stt done">внесено {{ r.posted.amount|floatformat:"0g" }} ₴</span>{% else %}<span class="muted">—</span>{% endif %}</td>
-    <td class="r nw act"><a href="{% url 'timesheet_list' %}?month={{ month.value }}&worker={{ r.worker.pk }}">табель</a>
+    <td class="r nw act"><a href="{% url 'construction:timesheet_list' %}?month={{ month.value }}&worker={{ r.worker.pk }}">табель</a>
       {% if r.pay > 0 and r.worker.project %}
-      <form method="post" action="{% url 'payroll_post' %}">{% csrf_token %}<input type="hidden" name="worker" value="{{ r.worker.pk }}"><input type="hidden" name="month" value="{{ month.value }}"><button>{% if r.posted %}оновити у витратах{% else %}внести у витрати{% endif %}</button></form>
+      <form method="post" action="{% url 'construction:payroll_post' %}">{% csrf_token %}<input type="hidden" name="worker" value="{{ r.worker.pk }}"><input type="hidden" name="month" value="{{ month.value }}"><button>{% if r.posted %}оновити у витратах{% else %}внести у витрати{% endif %}</button></form>
       {% endif %}</td></tr>
 {% empty %}<tr><td colspan="7" class="empty">Працівників ще немає.</td></tr>{% endfor %}
 </tbody>{% if rows %}<tfoot><tr><td colspan="3">Разом</td><td class="r">{{ total_hours|floatformat:"-2" }}</td><td class="r">{{ total_pay|floatformat:"2g" }}</td><td colspan="2"></td></tr></tfoot>{% endif %}</table></div>

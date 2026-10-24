@@ -21,15 +21,17 @@
       {{ password_form.non_field_errors }}
       {% for field in password_form %}
         <div class="field"><label class="label" for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}
-          {% if field.help_text %}<span class="helptext">{{ field.help_text|safe }}</span>{% endif %}{{ field.errors }}</div>
+          {% if field.help_text %}<span class="helptext">{{ field.help_text }}</span>{% endif %}{{ field.errors }}</div>
       {% endfor %}
       <button class="btn" name="change_password" value="1">Змінити пароль</button>
     </div>
   </form>
 </div>
 
-<div class="card" style="max-width:520px"><div class="card-head">Дані в базі MySQL</div>
+{% if counts %}
+<div class="card" style="max-width:520px"><div class="card-head">Мої дані в базі MySQL</div>
   <table class="tb"><tbody>
   {% for name, count in counts %}<tr><td>{{ name }}</td><td class="r"><b>{{ count }}</b></td></tr>{% endfor %}
   </tbody></table></div>
+{% endif %}
 {% endblock %}

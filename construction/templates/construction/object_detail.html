@@ -1,0 +1,24 @@
+{% extends "construction/base.html" %}
+{% block title %}{{ title }} — БудПроєкт{% endblock %}
+{% block crumb %}<div class="crumb"><a href="{{ back_url }}">← до списку</a></div>{% endblock %}
+{% block heading %}{{ title }}{% endblock %}
+{% block actions %}
+  <a class="btn btn-outline btn-sm" href="{{ edit_url }}">Редагувати</a>
+  <a class="btn btn-ghost btn-sm" href="{{ delete_url }}">Видалити</a>
+{% endblock %}
+{% block content %}
+<div class="card" style="max-width:720px"><div class="card-body">
+  <dl class="kv">
+    {% for row in rows %}
+      <dt>{{ row.label }}</dt>
+      <dd>
+        {% if row.value is None or row.value == "" %}—
+        {% elif row.url %}<a href="{{ row.url }}">{{ row.value }}</a>
+        {% elif row.value is True %}так
+        {% elif row.value is False %}ні
+        {% else %}{{ row.value|linebreaksbr }}{% endif %}
+      </dd>
+    {% endfor %}
+  </dl>
+</div></div>
+{% endblock %}

@@ -2,7 +2,7 @@
 {% block title %}Мої завдання — БудПроєкт{% endblock %}
 {% block heading %}Мої завдання{% endblock %}
 {% block description %}{{ worker.first_name }}, тут усе, що вам потрібно зробити{% if worker.project %} на проєкті «{{ worker.project.name }}»{% endif %}.{% endblock %}
-{% block actions %}<a class="btn" href="{% url 'my_hours' %}">Записати години</a>{% endblock %}
+{% block actions %}<a class="btn" href="{% url 'construction:my_hours' %}">Записати години</a>{% endblock %}
 {% block content %}
 {% if not worker.project %}
   <div class="alert alert-warning"><span>Вас ще не прикріплено до проєкту. Зверніться до директора.</span></div>
@@ -11,7 +11,7 @@
   <div class="stat c-warn"><span class="n">{{ active_count }}</span><span class="l">Активні завдання (у роботі: {{ in_progress_count }})</span></div>
   <div class="stat c-ok"><span class="n">{{ done_count }}</span><span class="l">Виконано</span></div>
   <div class="stat c-steel"><span class="n">{{ hours|floatformat:"-2" }} год</span><span class="l">Відпрацьовано, {{ month.label }}</span></div>
-  <div class="stat"><span class="n">{{ pay|floatformat:"0g" }} ₴</span><span class="l">Зарплата за {{ month.label }} <a href="{% url 'my_salary' %}">докладніше</a></span></div>
+  <div class="stat"><span class="n">{{ pay|floatformat:"0g" }} ₴</span><span class="l">Зарплата за {{ month.label }} <a href="{% url 'construction:my_salary' %}">докладніше</a></span></div>
 </div>
 <div class="tbw"><table class="tb"><thead><tr><th>Завдання</th><th>Проєкт</th><th>Термін</th><th>Статус</th><th class="r">Мої години</th><th></th></tr></thead><tbody>
 {% for t in tasks %}
@@ -22,9 +22,9 @@
     <td><span class="stt {{ t.status }}">{{ t.get_status_display }}</span></td>
     <td class="r">{{ t.my_hours|default_if_none:0|floatformat:"-2" }}</td>
     <td class="r nw act">
-      {% if t.status == 'pending' %}<form method="post" action="{% url 'my_task_status' t.pk 'in_progress' %}">{% csrf_token %}<button>почати</button></form>{% endif %}
-      {% if t.status != 'done' %}<a href="{% url 'my_hours' %}?task={{ t.pk }}">записати години</a>
-      <form method="post" action="{% url 'my_task_status' t.pk 'done' %}">{% csrf_token %}<button>виконано</button></form>{% endif %}
+      {% if t.status == 'pending' %}<form method="post" action="{% url 'construction:my_task_status' t.pk 'in_progress' %}">{% csrf_token %}<button>почати</button></form>{% endif %}
+      {% if t.status != 'done' %}<a href="{% url 'construction:my_hours' %}?task={{ t.pk }}">записати години</a>
+      <form method="post" action="{% url 'construction:my_task_status' t.pk 'done' %}">{% csrf_token %}<button>виконано</button></form>{% endif %}
     </td>
   </tr>
 {% empty %}<tr><td colspan="6" class="empty">Вам ще не призначено завдань.</td></tr>{% endfor %}

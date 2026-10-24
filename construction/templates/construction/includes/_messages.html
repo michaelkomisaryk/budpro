@@ -1,0 +1,3 @@
+{% for message in messages %}
+  <div class="alert alert-{{ message.tags }}"><span>{{ message }}</span><button class="alert-x" type="button" aria-label="Закрити">×</button></div>
+{% endfor %}

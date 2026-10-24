@@ -1,20 +1,21 @@
 {% extends "construction/base.html" %}
 {% block title %}Каталог матеріалів — БудПроєкт{% endblock %}
-{% block crumb %}<div class="crumb"><a href="{% url 'material_list' %}">Матеріали</a> /</div>{% endblock %}
+{% block crumb %}<div class="crumb"><a href="{% url 'construction:material_list' %}">Матеріали</a> /</div>{% endblock %}
 {% block heading %}Каталог матеріалів{% endblock %}
 {% block description %}Стандартні та власні позиції. Їх можна вибирати під час додавання матеріалу до проєкту.{% endblock %}
-{% block actions %}<a class="btn" href="{% url 'material_catalog_create' %}">Додати свою позицію</a>{% endblock %}
+{% block actions %}<a class="btn" href="{% url 'construction:material_catalog_create' %}">Додати свою позицію</a>{% endblock %}
 {% block content %}
 <form class="filters" method="get">
   <div class="grow"><label class="label">Пошук за назвою</label><input class="input" name="q" value="{{ q }}" placeholder="Назва матеріалу"></div>
   <button class="btn btn-outline">Знайти</button>
-  {% if q %}<a class="btn btn-ghost" href="{% url 'material_catalog' %}">Скинути</a>{% endif %}
+  {% if q %}<a class="btn btn-ghost" href="{% url 'construction:material_catalog' %}">Скинути</a>{% endif %}
 </form>
 <div class="tbw"><table class="tb"><thead><tr><th>Назва</th><th>Тип</th><th>Од. виміру</th><th class="r">Ціна, ₴</th><th></th></tr></thead><tbody>
 {% for i in items %}
-  <tr><td>{{ i.name }}</td><td>{% if i.is_custom %}<span class="stt active">своя</span>{% else %}<span class="muted">стандартна</span>{% endif %}</td>
+  <tr><td><a href="{{ i.get_absolute_url }}">{{ i.name }}</a></td><td>{% if i.is_custom %}<span class="stt active">своя</span>{% else %}<span class="muted">стандартна</span>{% endif %}</td>
     <td>{{ i.get_unit_display }}</td><td class="r">{{ i.unit_price|floatformat:"2g" }}</td>
-    <td class="r nw act"><a href="{% url 'material_catalog_edit' i.pk %}">змінити</a><a class="del" href="{% url 'material_catalog_delete' i.pk %}">видалити</a></td></tr>
-{% empty %}<tr><td colspan="5" class="empty">{% if q %}Нічого не знайдено.{% else %}Каталог порожній. <a href="{% url 'material_catalog_create' %}">Додати першу позицію</a>{% endif %}</td></tr>{% endfor %}
+    <td class="r nw act"><a href="{% url 'construction:catalog_edit' i.pk %}">змінити</a><a class="del" href="{% url 'construction:catalog_delete' i.pk %}">видалити</a></td></tr>
+{% empty %}<tr><td colspan="5" class="empty">{% if q %}Нічого не знайдено.{% else %}Каталог порожній. <a href="{% url 'construction:material_catalog_create' %}">Додати першу позицію</a>{% endif %}</td></tr>{% endfor %}
 </tbody></table></div>
+{% include "construction/includes/_pagination.html" %}
 {% endblock %}

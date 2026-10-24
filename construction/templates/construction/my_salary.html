@@ -18,7 +18,7 @@
     <div class="sec" style="margin-top:0"><h2>Як нараховано</h2></div>
     <div class="tbw"><table class="tb"><thead><tr><th>Завдання</th><th class="r">Години</th><th class="r">Сума, ₴</th></tr></thead><tbody>
     {% for r in by_task %}<tr><td>{{ r.task__title|default:"—" }}</td><td class="r">{{ r.total_hours|floatformat:"-2" }}</td><td class="r">{{ r.total_pay|floatformat:"2g" }}</td></tr>
-    {% empty %}<tr><td colspan="3" class="empty">За цей місяць годин ще немає. <a href="{% url 'my_hours' %}">Записати години</a></td></tr>{% endfor %}
+    {% empty %}<tr><td colspan="3" class="empty">За цей місяць годин ще немає. <a href="{% url 'construction:my_hours' %}">Записати години</a></td></tr>{% endfor %}
     </tbody>{% if by_task %}<tfoot><tr><td>Разом</td><td class="r">{{ hours|floatformat:"-2" }}</td><td class="r">{{ pay|floatformat:"2g" }}</td></tr></tfoot>{% endif %}</table></div>
   </div>
   <div>

@@ -32,7 +32,7 @@
     {% for l in logs %}
       <tr><td class="nw">{{ l.date|date:"d.m.Y" }}</td><td>{{ l.task.title|default:"—" }}{% if l.comment %}<div class="muted small">{{ l.comment }}</div>{% endif %}</td>
         <td class="r">{{ l.hours|floatformat:"-2" }}</td><td class="r">{{ l.pay|floatformat:"2g" }}</td>
-        <td class="r act"><a class="del" href="{% url 'my_hours_delete' l.pk %}">видалити</a></td></tr>
+        <td class="r act"><a class="del" href="{% url 'construction:my_hours_delete' l.pk %}">видалити</a></td></tr>
     {% empty %}<tr><td colspan="5" class="empty">За цей місяць записів немає.</td></tr>{% endfor %}
     </tbody></table></div>
   </div>

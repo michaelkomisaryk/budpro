@@ -1,12 +1,13 @@
 {% extends "construction/base.html" %}
+{% load construction_tags %}
 {% block title %}{{ project.name }} — БудПроєкт{% endblock %}
-{% block crumb %}<div class="crumb"><a href="{% url 'project_list' %}">Проєкти</a> /</div>{% endblock %}
+{% block crumb %}<div class="crumb"><a href="{% url 'construction:project_list' %}">Проєкти</a> /</div>{% endblock %}
 {% block heading %}{{ project.name }}{% endblock %}
 {% block description %}{{ project.address }}{% endblock %}
 {% block actions %}
   <span class="stt {{ project.status }}">{{ project.get_status_display }}</span>
-  <a class="btn btn-outline btn-sm" href="{% url 'project_edit' project.pk %}">Редагувати</a>
-  <a class="btn btn-ghost btn-sm" href="{% url 'project_delete' project.pk %}">Видалити</a>
+  <a class="btn btn-outline btn-sm" href="{% url 'construction:project_edit' project.pk %}">Редагувати</a>
+  <a class="btn btn-ghost btn-sm" href="{% url 'construction:project_delete' project.pk %}">Видалити</a>
 {% endblock %}
 {% block content %}
 {% if project.over_budget %}
@@ -30,6 +31,7 @@
       <dt>Адреса</dt><dd>{{ project.address }}</dd>
       <dt>Терміни</dt><dd>{{ project.start_date|date:"d.m.Y" }} – {{ project.end_date|date:"d.m.Y" }}</dd>
       <dt>До кінця</dt><dd>{% if project.status == 'completed' %}завершено{% elif project.days_left < 0 %}<span class="late-t">прострочено на {{ project.days_left|cut:"-" }} дн.</span>{% else %}{{ project.days_left }} дн.{% endif %}</dd>
+      <dt>Власник</dt><dd>{{ project.owner.get_full_name|default:project.owner.username }}</dd>
       <dt>Створено</dt><dd>{{ project.created_at|date:"d.m.Y" }}</dd>
       <dt>Опис</dt><dd>{{ project.description|default:"—"|linebreaksbr }}</dd>
     </dl>
@@ -41,43 +43,43 @@
   </div></div>
 </div>
 
-<div class="sec"><h2>Завдання</h2><a class="btn btn-sm" href="{% url 'task_create' %}?project={{ project.pk }}&next={{ request.path }}">Додати завдання</a></div>
+<div class="sec"><h2>Завдання</h2><a class="btn btn-sm" href="{% url 'construction:task_create' %}?project={{ project.pk }}&next={{ request.path }}">Додати завдання</a></div>
 <div class="tbw"><table class="tb"><thead><tr><th>Завдання</th><th>Виконавець</th><th>Термін</th><th>Статус</th><th></th></tr></thead><tbody>
 {% for t in tasks %}
   <tr class="{% if t.is_overdue %}late{% endif %}">
-    <td>{{ t.title }}</td>
+    <td><a href="{{ t.get_absolute_url }}">{{ t.title }}</a></td>
     <td>{{ t.assignee.full_name|default:"—" }}</td>
     <td class="nw">{{ t.due_date|date:"d.m.Y" }}{% if t.is_overdue %} <span class="late-t">· прострочено</span>{% endif %}</td>
     <td><span class="stt {{ t.status }}">{{ t.get_status_display }}</span></td>
     <td class="r nw act">
-      {% if t.status != 'done' %}<form method="post" action="{% url 'task_done' t.pk %}">{% csrf_token %}<input type="hidden" name="next" value="{{ request.path }}"><button>виконано</button></form>{% endif %}
-      <a href="{% url 'task_edit' t.pk %}?next={{ request.path }}">змінити</a><a class="del" href="{% url 'task_delete' t.pk %}?next={{ request.path }}">видалити</a>
+      {% if t.status != 'done' %}<form method="post" action="{% url 'construction:task_done' t.pk %}">{% csrf_token %}<input type="hidden" name="next" value="{{ request.path }}"><button>виконано</button></form>{% endif %}
+      <a href="{% url 'construction:task_edit' t.pk %}?next={{ request.path }}">змінити</a><a class="del" href="{% url 'construction:task_delete' t.pk %}?next={{ request.path }}">видалити</a>
     </td>
   </tr>
 {% empty %}<tr><td colspan="5" class="empty">Завдань ще немає.</td></tr>{% endfor %}
 </tbody></table></div>
 
-<div class="sec"><h2>Працівники</h2><a class="btn btn-sm" href="{% url 'worker_create' %}?project={{ project.pk }}&next={{ request.path }}">Додати працівника</a></div>
+<div class="sec"><h2>Працівники</h2><a class="btn btn-sm" href="{% url 'construction:worker_create' %}?project={{ project.pk }}&next={{ request.path }}">Додати працівника</a></div>
 <div class="tbw"><table class="tb"><thead><tr><th>Працівник</th><th>Посада</th><th>Телефон</th><th class="r">Ставка</th><th></th></tr></thead><tbody>
 {% for w in workers %}
-  <tr><td><span class="av av{{ w.tone }}">{{ w.initials }}</span>{{ w.full_name }}</td><td>{{ w.get_position_display }}</td><td class="nw">{{ w.phone }}</td><td class="r nw">{{ w.hourly_rate|floatformat:"2g" }} ₴/год</td>
-    <td class="r nw act"><a href="{% url 'worker_edit' w.pk %}?next={{ request.path }}">змінити</a><a class="del" href="{% url 'worker_delete' w.pk %}?next={{ request.path }}">видалити</a></td></tr>
+  <tr><td><span class="av av{{ w.tone }}">{{ w.initials }}</span><a href="{{ w.get_absolute_url }}">{{ w.full_name }}</a></td><td>{{ w.get_position_display }}</td><td class="nw">{{ w.phone }}</td><td class="r nw">{{ w.hourly_rate|floatformat:"2g" }} ₴/год</td>
+    <td class="r nw act"><a href="{% url 'construction:worker_edit' w.pk %}?next={{ request.path }}">змінити</a><a class="del" href="{% url 'construction:worker_delete' w.pk %}?next={{ request.path }}">видалити</a></td></tr>
 {% empty %}<tr><td colspan="5" class="empty">До проєкту ще не прикріплено працівників.</td></tr>{% endfor %}
 </tbody></table></div>
 
-<div class="sec"><h2>Матеріали</h2><a class="btn btn-sm" href="{% url 'material_create' %}?project={{ project.pk }}&next={{ request.path }}">Додати матеріал</a></div>
+<div class="sec"><h2>Матеріали</h2><a class="btn btn-sm" href="{% url 'construction:material_create' %}?project={{ project.pk }}&next={{ request.path }}">Додати матеріал</a></div>
 <div class="tbw"><table class="tb"><thead><tr><th>Матеріал</th><th class="r">Кількість</th><th class="r">Ціна, ₴</th><th class="r">Вартість, ₴</th><th></th></tr></thead><tbody>
 {% for m in materials %}
-  <tr><td>{{ m.name }}</td><td class="r nw">{{ m.quantity|floatformat:"-2g" }} {{ m.get_unit_display }}</td><td class="r">{{ m.unit_price|floatformat:"2g" }}</td><td class="r">{{ m.cost|floatformat:"2g" }}</td>
-    <td class="r nw act"><a href="{% url 'material_edit' m.pk %}?next={{ request.path }}">змінити</a><a class="del" href="{% url 'material_delete' m.pk %}?next={{ request.path }}">видалити</a></td></tr>
+  <tr><td><a href="{{ m.get_absolute_url }}">{{ m.name }}</a></td><td class="r nw">{{ m.quantity|floatformat:"-2g" }} {{ m.get_unit_display }}</td><td class="r">{{ m.unit_price|floatformat:"2g" }}</td><td class="r">{{ m.cost|floatformat:"2g" }}</td>
+    <td class="r nw act"><a href="{% url 'construction:material_edit' m.pk %}?next={{ request.path }}">змінити</a><a class="del" href="{% url 'construction:material_delete' m.pk %}?next={{ request.path }}">видалити</a></td></tr>
 {% empty %}<tr><td colspan="5" class="empty">Матеріалів ще немає.</td></tr>{% endfor %}
 </tbody>{% if materials %}<tfoot><tr><td colspan="3">Разом (облік матеріалів)</td><td class="r">{{ project.materials_cost|floatformat:"2g" }}</td><td></td></tr></tfoot>{% endif %}</table></div>
 
-<div class="sec"><h2>Витрати</h2><a class="btn btn-sm" href="{% url 'expense_create' %}?project={{ project.pk }}&next={{ request.path }}">Додати витрату</a></div>
+<div class="sec"><h2>Витрати</h2><a class="btn btn-sm" href="{% url 'construction:expense_create' %}?project={{ project.pk }}&next={{ request.path }}">Додати витрату</a></div>
 <div class="tbw"><table class="tb"><thead><tr><th>Дата</th><th>Витрата</th><th>Категорія</th><th class="r">Сума, ₴</th><th></th></tr></thead><tbody>
 {% for e in expenses %}
-  <tr><td class="nw">{{ e.date|date:"d.m.Y" }}</td><td>{{ e.title }}</td><td>{{ e.get_category_display }}</td><td class="r">{{ e.amount|floatformat:"2g" }}</td>
-    <td class="r nw act"><a href="{% url 'expense_edit' e.pk %}?next={{ request.path }}">змінити</a><a class="del" href="{% url 'expense_delete' e.pk %}?next={{ request.path }}">видалити</a></td></tr>
+  <tr><td class="nw">{{ e.date|date:"d.m.Y" }}</td><td><a href="{{ e.get_absolute_url }}">{{ e.title }}</a></td><td>{{ e.get_category_display }}</td><td class="r">{{ e.amount|floatformat:"2g" }}</td>
+    <td class="r nw act"><a href="{% url 'construction:expense_edit' e.pk %}?next={{ request.path }}">змінити</a><a class="del" href="{% url 'construction:expense_delete' e.pk %}?next={{ request.path }}">видалити</a></td></tr>
 {% empty %}<tr><td colspan="5" class="empty">Витрат ще немає.</td></tr>{% endfor %}
 </tbody>{% if expenses %}<tfoot><tr><td colspan="3">Разом (фактичні витрати)</td><td class="r {% if project.over_budget %}neg{% endif %}">{{ project.spent|floatformat:"2g" }}</td><td></td></tr></tfoot>{% endif %}</table></div>
 {% endblock %}

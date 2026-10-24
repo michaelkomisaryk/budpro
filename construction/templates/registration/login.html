@@ -1,30 +1,16 @@
-{% load static %}<!doctype html>
-<html lang="uk">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Вхід — БудПроєкт</title>
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="{% static 'construction/css/style.css' %}">
-</head>
-<body>
-<div class="auth">
-  <div class="l"><div class="stripe"></div>
-    <h2>Планування, контроль і супровід будівельних проєктів</h2>
-    <ul><li>Проєкти, завдання та терміни</li><li>Бюджет і фактичні витрати</li><li>Працівники, матеріали та звіти</li></ul>
-  </div>
-  <div class="r2">
-    <form method="post">{% csrf_token %}
-      <h1 class="t">Вхід</h1><p class="sub" style="margin-bottom:1.5rem">БудПроєкт — увійдіть, щоб продовжити</p>
-      {% if form.errors %}<div class="alert alert-error">Невірний логін або пароль.</div>{% endif %}
-      <div class="field"><label class="label" for="id_username">Логін</label>
-        <input class="input" id="id_username" name="username" autofocus required></div>
-      <div class="field"><label class="label" for="id_password">Пароль</label>
-        <input class="input" id="id_password" type="password" name="password" required></div>
-      <input type="hidden" name="next" value="{{ next }}">
-      <button class="btn" style="width:100%;padding:.6rem">Увійти</button>
-    </form>
-  </div>
-</div>
-</body>
-</html>
+{% extends "registration/auth_base.html" %}
+{% block title %}Вхід — БудПроєкт{% endblock %}
+{% block auth_form %}
+<form method="post">{% csrf_token %}
+  <h1 class="t">Вхід</h1><p class="sub" style="margin-bottom:1.5rem">БудПроєкт — увійдіть, щоб продовжити</p>
+  {% if form.errors %}<div class="alert alert-error">Невірний логін або пароль.</div>{% endif %}
+  <div class="field"><label class="label" for="id_username">Логін</label>
+    <input class="input" id="id_username" name="username" autofocus required></div>
+  <div class="field"><label class="label" for="id_password">Пароль</label>
+    <input class="input" id="id_password" type="password" name="password" required></div>
+  <input type="hidden" name="next" value="{{ next }}">
+  <button class="btn" style="width:100%;padding:.6rem">Увійти</button>
+  <p class="small text-center mt-3"><a href="{% url 'construction:password_reset' %}">Забули пароль?</a></p>
+  <p class="small text-center mb-0">Немає акаунта? <a href="{% url 'construction:register' %}">Зареєструватися як директор</a></p>
+</form>
+{% endblock %}

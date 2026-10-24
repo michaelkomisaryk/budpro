@@ -2,13 +2,14 @@
 {% block title %}Звіти — БудПроєкт{% endblock %}
 {% block heading %}Звіти{% endblock %}
 {% block description %}Бюджет і фактичні витрати за проєктами, категоріями та періодом.{% endblock %}
-{% block actions %}<a class="btn btn-outline" href="{% url 'report_csv' %}?{{ request.GET.urlencode }}">Експорт у CSV</a>{% endblock %}
+{% block actions %}<a class="btn btn-outline" href="{% url 'construction:report_csv' %}?{{ request.GET.urlencode }}">Експорт у CSV</a>{% endblock %}
 {% block content %}
+{% if period_form.non_field_errors %}<div class="alert alert-error"><span>{{ period_form.non_field_errors|striptags }}</span></div>{% endif %}
 <form class="filters" method="get">
   <div><label class="label">Період: від</label><input class="input" type="date" name="date_from" value="{{ date_from|date:'Y-m-d' }}"></div>
   <div><label class="label">до</label><input class="input" type="date" name="date_to" value="{{ date_to|date:'Y-m-d' }}"></div>
   <button class="btn">Застосувати</button>
-  {% if date_from or date_to %}<a class="btn btn-ghost" href="{% url 'report_list' %}">Скинути період</a>{% endif %}
+  {% if date_from or date_to %}<a class="btn btn-ghost" href="{% url 'construction:report_list' %}">Скинути період</a>{% endif %}
 </form>
 
 <div class="stats">

@@ -1,21 +1,16 @@
 {% extends "construction/base.html" %}
+{% load construction_tags %}
 {% block title %}Проєкти — БудПроєкт{% endblock %}
 {% block heading %}Проєкти{% endblock %}
-{% block description %}Усі будівельні проєкти, їхні терміни та бюджет.{% endblock %}
-{% block actions %}<a class="btn" href="{% url 'project_create' %}">Новий проєкт</a>{% endblock %}
+{% block description %}Ваші будівельні проєкти, їхні терміни та бюджет.{% endblock %}
+{% block actions %}<a class="btn" href="{% url 'construction:project_create' %}">Новий проєкт</a>{% endblock %}
 {% block content %}
 <form class="filters" method="get">
-  <div class="grow"><label class="label">Пошук за назвою</label><input class="input" name="q" value="{{ q }}" placeholder="Введіть назву проєкту"></div>
-  <div><label class="label">Статус</label>
-    <select class="select" name="status" data-autosubmit><option value="">Усі статуси</option>
-      {% for value, label in statuses %}<option value="{{ value }}" {% if status == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
-    </select></div>
-  <div><label class="label">Сортування</label>
-    <select class="select" name="sort" data-autosubmit>
-      {% for value, label in sorts %}<option value="{{ value }}" {% if sort == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
-    </select></div>
-  <button class="btn btn-outline">Знайти</button>
-  {% if q or status %}<a class="btn btn-ghost" href="{% url 'project_list' %}">Скинути</a>{% endif %}
+  <div class="grow"><label class="label" for="{{ filter_form.q.id_for_label }}">{{ filter_form.q.label }}</label>{{ filter_form.q }}</div>
+  <div><label class="label" for="{{ filter_form.status.id_for_label }}">{{ filter_form.status.label }}</label>{{ filter_form.status }}</div>
+  <div><label class="label" for="{{ filter_form.sort.id_for_label }}">{{ filter_form.sort.label }}</label>{{ filter_form.sort }}</div>
+  {% url 'construction:project_list' as reset %}
+  {% include "construction/includes/_filter_actions.html" with active=filters_active reset_url=reset %}
 </form>
 
 <div class="tbw"><table class="tb">
@@ -28,12 +23,13 @@
       <td class="nw">{{ p.start_date|date:"d.m.Y" }} – {{ p.end_date|date:"d.m.Y" }}{% if p.is_overdue %}<br><span class="late-t">прострочено</span>{% endif %}</td>
       <td class="r nw">{{ p.budget|floatformat:"0g" }}</td>
       <td class="r nw {% if p.over_budget %}neg{% endif %}">{{ p.spent|floatformat:"0g" }}</td>
-      <td style="min-width:130px"><div class="pct"><div class="bar {% if p.over_budget %}bad{% else %}w{% endif %}"><i style="width:{{ p.budget_bar }}%"></i></div><span class="{% if p.over_budget %}neg{% endif %}">{{ p.budget_percent }}%</span></div></td>
-      <td class="r nw act"><a href="{{ p.get_absolute_url }}">перегляд</a><a href="{% url 'project_edit' p.pk %}">змінити</a><a class="del" href="{% url 'project_delete' p.pk %}">видалити</a></td>
+      <td style="min-width:130px">{% budget_bar p %}</td>
+      <td class="r nw act"><a href="{{ p.get_absolute_url }}">перегляд</a><a href="{% url 'construction:project_edit' p.pk %}">змінити</a><a class="del" href="{% url 'construction:project_delete' p.pk %}">видалити</a></td>
     </tr>
   {% empty %}
-    <tr><td colspan="7" class="empty">{% if q or status %}За цими умовами проєктів не знайдено.{% else %}Проєктів ще немає. <a href="{% url 'project_create' %}">Додати перший проєкт</a>{% endif %}</td></tr>
+    <tr><td colspan="7" class="empty">{% if filters_active %}За цими умовами проєктів не знайдено.{% else %}Проєктів ще немає. <a href="{% url 'construction:project_create' %}">Додати перший проєкт</a>{% endif %}</td></tr>
   {% endfor %}
   </tbody>
 </table></div>
+{% include "construction/includes/_pagination.html" %}
 {% endblock %}

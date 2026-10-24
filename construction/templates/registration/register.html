@@ -1,0 +1,18 @@
+{% extends "registration/auth_base.html" %}
+{% block title %}Реєстрація — БудПроєкт{% endblock %}
+{% block auth_form %}
+<form method="post" novalidate>{% csrf_token %}
+  <h1 class="t">Реєстрація</h1><p class="sub" style="margin-bottom:1.5rem">Створіть акаунт директора, щоб вести власні проєкти</p>
+  {{ form.non_field_errors }}
+  <div class="row g-2">
+    <div class="col-6 field"><label class="label" for="{{ form.first_name.id_for_label }}">{{ form.first_name.label }}</label>{{ form.first_name }}{{ form.first_name.errors }}</div>
+    <div class="col-6 field"><label class="label" for="{{ form.last_name.id_for_label }}">{{ form.last_name.label }}</label>{{ form.last_name }}{{ form.last_name.errors }}</div>
+  </div>
+  {% for field in form %}{% if field.name != "first_name" and field.name != "last_name" %}
+    <div class="field"><label class="label" for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}
+      {% if field.help_text %}<span class="helptext">{{ field.help_text }}</span>{% endif %}{{ field.errors }}</div>
+  {% endif %}{% endfor %}
+  <button class="btn" style="width:100%;padding:.6rem">Зареєструватися</button>
+  <p class="small text-center mt-3 mb-0">Вже є акаунт? <a href="{% url 'construction:login' %}">Увійти</a></p>
+</form>
+{% endblock %}

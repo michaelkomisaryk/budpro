@@ -2,7 +2,7 @@
 {% block title %}Працівники — БудПроєкт{% endblock %}
 {% block heading %}Працівники{% endblock %}
 {% block description %}Люди, які працюють на будівництві, та проєкти, до яких вони прикріплені.{% endblock %}
-{% block actions %}<a class="btn" href="{% url 'worker_create' %}">Новий працівник</a>{% endblock %}
+{% block actions %}<a class="btn" href="{% url 'construction:worker_create' %}">Новий працівник</a>{% endblock %}
 {% block content %}
 <form class="filters" method="get">
   <div class="grow"><label class="label">Пошук за ім'ям або прізвищем</label><input class="input" name="q" value="{{ q }}" placeholder="Наприклад, Іван"></div>
@@ -15,15 +15,16 @@
       {% for p in projects %}<option value="{{ p.pk }}" {% if project_id == p.pk|stringformat:"d" %}selected{% endif %}>{{ p.name }}</option>{% endfor %}
     </select></div>
   <button class="btn btn-outline">Знайти</button>
-  {% if q or position or project_id %}<a class="btn btn-ghost" href="{% url 'worker_list' %}">Скинути</a>{% endif %}
+  {% if q or position or project_id %}<a class="btn btn-ghost" href="{% url 'construction:worker_list' %}">Скинути</a>{% endif %}
 </form>
 <div class="tbw"><table class="tb"><thead><tr><th>Працівник</th><th>Посада</th><th>Телефон</th><th>Проєкт</th><th class="r">Ставка</th><th>Акаунт</th><th></th></tr></thead><tbody>
 {% for w in workers %}
-  <tr><td><span class="av av{{ w.tone }}">{{ w.initials }}</span>{{ w.full_name }}</td><td>{{ w.get_position_display }}</td><td class="nw">{{ w.phone }}</td>
+  <tr><td><span class="av av{{ w.tone }}">{{ w.initials }}</span><a href="{{ w.get_absolute_url }}">{{ w.full_name }}</a></td><td>{{ w.get_position_display }}</td><td class="nw">{{ w.phone }}</td>
     <td>{% if w.project %}<a href="{{ w.project.get_absolute_url }}">{{ w.project.name }}</a>{% else %}<span class="muted">не прикріплено</span>{% endif %}</td>
     <td class="r nw">{{ w.hourly_rate|floatformat:"2g" }} ₴/год</td>
     <td>{% if w.user %}<span class="stt done">{{ w.user.username }}</span>{% else %}<span class="muted">немає</span>{% endif %}</td>
-    <td class="r nw act">{% if w.project %}<a href="{{ w.project.get_absolute_url }}">проєкт</a>{% endif %}<a href="{% url 'timesheet_list' %}?worker={{ w.pk }}">табель</a><a href="{% url 'worker_edit' w.pk %}">змінити</a><a class="del" href="{% url 'worker_delete' w.pk %}">видалити</a></td></tr>
-{% empty %}<tr><td colspan="7" class="empty">{% if q or position or project_id %}Працівників за цими умовами не знайдено.{% else %}Працівників ще немає. <a href="{% url 'worker_create' %}">Додати першого працівника</a>{% endif %}</td></tr>{% endfor %}
+    <td class="r nw act">{% if w.project %}<a href="{{ w.project.get_absolute_url }}">проєкт</a>{% endif %}<a href="{% url 'construction:timesheet_list' %}?worker={{ w.pk }}">табель</a><a href="{% url 'construction:worker_edit' w.pk %}">змінити</a><a class="del" href="{% url 'construction:worker_delete' w.pk %}">видалити</a></td></tr>
+{% empty %}<tr><td colspan="7" class="empty">{% if q or position or project_id %}Працівників за цими умовами не знайдено.{% else %}Працівників ще немає. <a href="{% url 'construction:worker_create' %}">Додати першого працівника</a>{% endif %}</td></tr>{% endfor %}
 </tbody></table></div>
+{% include "construction/includes/_pagination.html" %}
 {% endblock %}

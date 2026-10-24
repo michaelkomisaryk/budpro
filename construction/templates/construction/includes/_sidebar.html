@@ -1,0 +1,26 @@
+<aside class="side" id="side">
+  <div class="stripe"></div>
+  <div class="brand"><b>БудПроєкт</b><span>планування та контроль будівництва</span></div>
+  {% if is_director %}
+    <a class="nl {% if page == 'dashboard' %}on{% endif %}" href="{% url 'construction:dashboard' %}">Головна</a>
+    <a class="nl {% if 'project' in page %}on{% endif %}" href="{% url 'construction:project_list' %}">Проєкти</a>
+    <a class="nl {% if 'task' in page %}on{% endif %}" href="{% url 'construction:task_list' %}">Завдання</a>
+    <a class="nl {% if 'worker' in page %}on{% endif %}" href="{% url 'construction:worker_list' %}">Працівники</a>
+    <a class="nl {% if 'material' in page or 'catalog' in page %}on{% endif %}" href="{% url 'construction:material_list' %}">Матеріали</a>
+    <a class="nl {% if 'expense' in page %}on{% endif %}" href="{% url 'construction:expense_list' %}">Витрати</a>
+    <a class="nl {% if 'timesheet' in page %}on{% endif %}" href="{% url 'construction:timesheet_list' %}">Табель годин</a>
+    {% if perms.construction.manage_payroll %}<a class="nl {% if 'payroll' in page %}on{% endif %}" href="{% url 'construction:payroll' %}">Зарплати</a>{% endif %}
+    {% if perms.construction.view_finance_reports %}<a class="nl {% if 'report' in page %}on{% endif %}" href="{% url 'construction:report_list' %}">Звіти</a>{% endif %}
+  {% else %}
+    <a class="nl {% if page == 'my_tasks' %}on{% endif %}" href="{% url 'construction:my_tasks' %}">Мої завдання</a>
+    <a class="nl {% if 'my_hours' in page %}on{% endif %}" href="{% url 'construction:my_hours' %}">Мої години</a>
+    <a class="nl {% if page == 'my_project' %}on{% endif %}" href="{% url 'construction:my_project' %}">Проєкт і матеріали</a>
+    <a class="nl {% if page == 'my_salary' %}on{% endif %}" href="{% url 'construction:my_salary' %}">Моя зарплата</a>
+  {% endif %}
+  <a class="nl {% if page == 'app_settings' %}on{% endif %}" href="{% url 'construction:app_settings' %}">Налаштування</a>
+  <div class="me">
+    <span class="av av2" style="margin:0">{{ user.username|slice:":2"|upper }}</span>
+    <div>{{ user.get_full_name|default:user.username }}<div class="muted small" style="color:#948f7f">{% if is_director %}Директор{% else %}Працівник{% endif %}</div>
+      <form method="post" action="{% url 'construction:logout' %}">{% csrf_token %}<button>Вийти</button></form></div>
+  </div>
+</aside>
