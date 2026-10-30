@@ -10,7 +10,8 @@ load_dotenv(BASE_DIR / ".env")
 
 # SECRET_KEY і DEBUG беруться зі змінних оточення (файл .env). Значення за замовчуванням - лише для розробки.
 SECRET_KEY = os.environ.get("SECRET_KEY") or "dev-only-change-me"
-DEBUG = os.environ.get("DEBUG", "1") in ("1", "true", "True")
+# порожнє або відсутнє значення DEBUG = режим розробки; для бойового запуску явно вкажіть DEBUG=0
+DEBUG = (os.environ.get("DEBUG") or "1").lower() in ("1", "true", "yes")
 ALLOWED_HOSTS = ["127.0.0.1", "localhost"]
 
 INSTALLED_APPS = [
