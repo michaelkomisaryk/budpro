@@ -51,6 +51,17 @@ pip install -r requirements.txt
 Перевірка ролей і власника виконується **на сервері** (`construction/mixins.py`, `construction/access.py`);
 чужий запис дає 404. Групи й права створює data-міграція `0006_assign_owners_and_roles`.
 
+
+## Selenium (браузерні тести)
+Потрібен Google Chrome. Два тести самі відкривають вікно Chrome:
+
+```bash
+.venv/bin/python manage.py test construction.browser_tests.RegistrationChromeTests.test_registration_creates_a_director --keepdb
+.venv/bin/python manage.py test construction.browser_tests.ProjectChromeTests.test_director_creates_a_project --keepdb
+```
+
+Перший реєструє директора і перевіряє групу «Директор». Другий логіниться директором, створює проєкт і перевіряє його в списку та в БД.
+
 ## Тести та Debug Toolbar
 ```bash
 python manage.py test construction     # потрібен користувач MySQL з правом CREATE DATABASE

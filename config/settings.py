@@ -1,4 +1,5 @@
 import os
+import sys
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -12,7 +13,7 @@ load_dotenv(BASE_DIR / ".env")
 SECRET_KEY = os.environ.get("SECRET_KEY") or "dev-only-change-me"
 # порожнє або відсутнє значення DEBUG = режим розробки; для бойового запуску явно вкажіть DEBUG=0
 DEBUG = (os.environ.get("DEBUG") or "1").lower() in ("1", "true", "yes")
-ALLOWED_HOSTS = ["127.0.0.1", "localhost"]
+ALLOWED_HOSTS = ["127.0.0.1", "localhost", "testserver"]
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -24,9 +25,10 @@ INSTALLED_APPS = [
     "construction",
 ]
 
-# Django Debug Toolbar (лише в режимі розробки, якщо пакет встановлено) - підтвердження відсутності N+1
+# Django Debug Toolbar (лише в режимі розробки, не під час тестів — інакше перехоплює кліки Selenium)
 USE_DEBUG_TOOLBAR = False
-if DEBUG:
+RUNNING_TESTS = "test" in sys.argv
+if DEBUG and not RUNNING_TESTS:
     try:
         import debug_toolbar  # noqa: F401
     except ImportError:
